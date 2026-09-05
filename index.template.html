@@ -240,6 +240,9 @@
 <div class="drawer" id="drawer">
   <h3>Teams (pass &amp; play)</h3>
   <div class="minipills" id="teamPills"></div>
+  <h3>My songs (Spotify / any list)</h3>
+  <button class="btn" id="importBtn">📥 Import my songs</button>
+  <button class="btn warn" id="clearMyBtn">Clear imported songs</button>
   <h3>Artist filter</h3>
   <input type="text" id="artistInput" list="artistList" placeholder="Type an artist…">
   <datalist id="artistList"></datalist>
@@ -312,6 +315,25 @@
     <div class="msg" id="msg"></div>
   </div>
 
+  <div class="rscrim" id="iscrim"></div>
+  <div class="reveal imp" id="importModal">
+    <div class="rtitle">📥 Import your songs</div>
+    <div class="rmeta" style="margin:8px 0 12px">
+      Paste songs below (one per line, <b>Song - Artist</b>) or drop a CSV export
+      of your Spotify library (e.g. from <b>exportify.net</b> — open it, pick your
+      Liked Songs playlist, download the CSV).
+    </div>
+    <textarea id="impText" placeholder="Kesariya - Arijit Singh&#10;Husn - Anuv Jain&#10;Blinding Lights - The Weeknd"
+      style="width:100%;height:110px;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:10px;font-size:.9rem;resize:vertical"></textarea>
+    <input type="file" id="impFile" accept=".csv,.txt" style="margin:10px 0;width:100%;color:var(--muted);font-size:.85rem">
+    <div class="rmeta" id="impStatus" style="min-height:20px"></div>
+    <div class="tl-bar" style="position:relative;margin:8px 0"><div class="tl-fill" id="impProg" style="width:0%"></div></div>
+    <div class="actions">
+      <button class="btn" id="impCancel">Close</button>
+      <button class="btn primary" id="impStart">Scan &amp; match</button>
+    </div>
+  </div>
+
   <div class="rscrim" id="rscrim"></div>
   <div class="reveal" id="reveal">
     <div class="verdict" id="verdict"></div>
@@ -337,7 +359,13 @@ const CATS = [
   { id: 'b', label: '🎬 Bollywood', test: s => s.c === 'b' },
   { id: 'h', label: '🎸 Hollywood', test: s => s.c === 'h' },
   { id: 'i', label: '🎤 Indie', test: s => s.c === 'i' },
+  { id: 'my', label: '💚 My songs', test: s => s.c === 'my' },
 ];
+
+/* ---- imported personal catalog ---- */
+let MY = [];
+try { MY = JSON.parse(localStorage.getItem('bollyspot_my') || '[]'); } catch (e) {}
+MY.forEach(s => SONGS.push(s));
 const LANGS = [
   { id: 'any', label: 'Any language', test: () => true },
   { id: 'hi', label: 'हिंदी Hindi', test: s => s.l === 'hi' },
@@ -447,9 +475,10 @@ function pool() {
     s => baseFilters(s),
     () => true,
   ];
+  const minN = cat.id === 'my' ? 1 : 5;
   for (const t of tiers) {
     const p = SONGS.filter(t);
-    if (p.length >= 5) return p;
+    if (p.length >= minN) return p;
   }
   return SONGS;
 }
@@ -753,6 +782,141 @@ $('teamPills').onclick = e => {
   renderTeams(); newRound();
 };
 
+/* ---- import my songs (Spotify export / pasted list) ---- */
+function precompute(s) {
+  s.k = norm(s.t);
+  s.search = norm(s.t + ' ' + (s.m || '') + ' ' + s.a);
+  s.tw = words(s.t);
+  s.ow = words((s.m || '') + ' ' + s.a);
+  s.mood = moodOf(s);
+}
+function parseCSV(text) {
+  const rows = [];
+  let row = [], cur = '', inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQ) {
+      if (ch === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else inQ = false; }
+      else cur += ch;
+    } else if (ch === '"') inQ = true;
+    else if (ch === ',') { row.push(cur); cur = ''; }
+    else if (ch === '\n' || ch === '\r') {
+      if (cur !== '' || row.length) { row.push(cur); rows.push(row); row = []; cur = ''; }
+    } else cur += ch;
+  }
+  if (cur !== '' || row.length) { row.push(cur); rows.push(row); }
+  return rows;
+}
+function extractTracks(text) {
+  const tracks = [];
+  if (text.includes(',') && /track|name|artist|title/i.test(text.split('\n')[0])) {
+    const rows = parseCSV(text);
+    const head = rows[0].map(h => h.toLowerCase());
+    let ti = head.findIndex(h => /track.?name|^name$|^title$|^song/.test(h));
+    let ai = head.findIndex(h => /artist/.test(h));
+    if (ti < 0) ti = 1;
+    if (ai < 0) ai = ti + 1;
+    for (const r of rows.slice(1)) {
+      if (r[ti] && r[ai]) tracks.push({ t: r[ti].trim(), a: r[ai].trim().split(/[,;]/)[0].trim() });
+    }
+  } else {
+    for (const line of text.split('\n')) {
+      const m = line.split(/\s+[-–—]\s+|\s+by\s+/i);
+      if (m.length >= 2 && m[0].trim()) tracks.push({ t: m[0].trim(), a: m[1].trim() });
+      else if (line.trim().length > 2) tracks.push({ t: line.trim(), a: '' });
+    }
+  }
+  return tracks.slice(0, 150);
+}
+let jsonpN = 0;
+function itunesJSONP(term, country) {
+  return new Promise(resolve => {
+    const cb = '__itcb' + (jsonpN++);
+    const sc = document.createElement('script');
+    const timer = setTimeout(() => { cleanup(); resolve(null); }, 8000);
+    function cleanup() { clearTimeout(timer); delete window[cb]; sc.remove(); }
+    window[cb] = data => { cleanup(); resolve(data); };
+    sc.src = 'https://itunes.apple.com/search?term=' + encodeURIComponent(term) +
+      '&country=' + country + '&media=music&entity=song&limit=5&callback=' + cb;
+    sc.onerror = () => { cleanup(); resolve(null); };
+    document.head.appendChild(sc);
+  });
+}
+async function matchTrack(tr) {
+  for (const country of ['IN', 'US']) {
+    const data = await itunesJSONP((tr.t + ' ' + tr.a).trim(), country);
+    if (!data || !data.results) continue;
+    const want = norm(tr.t);
+    for (const r of data.results) {
+      if (!r.previewUrl) continue;
+      const got = norm(r.trackName);
+      if (got.includes(want) || want.includes(got) || lev1(want, got)) {
+        const clean = r.trackName.replace(/\s*[\(\[](From|Original|feat|Feat)[^\)\]]*[\)\]]/g, '').trim();
+        return {
+          t: clean || r.trackName, a: r.artistName, m: '', y: r.releaseDate ? +r.releaseDate.slice(0, 4) : 0,
+          p: r.previewUrl, art: (r.artworkUrl100 || '').replace('100x100', '300x300'),
+          c: 'my', l: /Bollywood|Filmi|Indian|Punjabi|Sufi|Ghazal/i.test(r.primaryGenreName || '') ? 'hi' : 'en', f: 1
+        };
+      }
+    }
+  }
+  return null;
+}
+let importing = false;
+function openImport() {
+  $('iscrim').classList.add('open'); $('importModal').classList.add('open');
+  $('impStatus').textContent = MY.length ? MY.length + ' songs imported so far.' : '';
+}
+function closeImport() {
+  if (importing) return;
+  $('iscrim').classList.remove('open'); $('importModal').classList.remove('open');
+}
+$('importBtn').onclick = () => { $('drawer').classList.remove('open'); $('scrim').classList.remove('open'); openImport(); };
+$('impCancel').onclick = closeImport;
+$('iscrim').onclick = closeImport;
+$('impFile').onchange = e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => { $('impText').value = rd.result; $('impStatus').textContent = 'File loaded — hit Scan & match.'; };
+  rd.readAsText(f);
+};
+$('impStart').onclick = async () => {
+  if (importing) return;
+  const tracks = extractTracks($('impText').value);
+  if (!tracks.length) { $('impStatus').textContent = 'Nothing to scan — paste songs or choose a CSV first.'; return; }
+  importing = true;
+  $('impStart').textContent = 'Scanning…';
+  const have = new Set(MY.map(s => s.p));
+  let done = 0, matched = 0;
+  for (const tr of tracks) {
+    const hit = await matchTrack(tr);
+    done++;
+    if (hit && !have.has(hit.p)) {
+      have.add(hit.p);
+      precompute(hit);
+      MY.push(hit); SONGS.push(hit);
+      matched++;
+    }
+    $('impProg').style.width = (done / tracks.length * 100) + '%';
+    $('impStatus').textContent = `${done}/${tracks.length} scanned · ${matched} new matches`;
+    await new Promise(r => setTimeout(r, 250));
+  }
+  try { localStorage.setItem('bollyspot_my', JSON.stringify(MY)); } catch (e) {}
+  importing = false;
+  $('impStart').textContent = 'Scan & match';
+  $('impStatus').textContent = `Done — ${matched} new songs added (${MY.length} total in 💚 My songs).`;
+  toast(`💚 ${matched} songs added to My songs`, 'good');
+  renderCounts();
+};
+$('clearMyBtn').onclick = () => {
+  MY = [];
+  try { localStorage.removeItem('bollyspot_my'); } catch (e) {}
+  for (let i = SONGS.length - 1; i >= 0; i--) if (SONGS[i].c === 'my') SONGS.splice(i, 1);
+  if (cat.id === 'my') cat = CATS[0];
+  renderPills(); renderCounts(); toast('Imported songs cleared', '');
+};
+
 /* ---- events ---- */
 $('playBtn').onclick = () => { if (!roundOver) playSnippet(); };
 $('moreBtn').onclick = () => { if (!roundOver) useTry('⏩ Hint', ''); };
@@ -792,6 +956,12 @@ function pillHandler(elId, key, items, assign) {
 }
 pillHandler('catPills', 'cat', CATS, v => {
   cat = v;
+  if (v.id === 'my' && !SONGS.some(s => s.c === 'my')) {
+    cat = CATS[0];
+    openImport();
+    toast('No songs imported yet — add some first!', '');
+    return;
+  }
   if (!SONGS.some(s => cat.test(s) && lang.test(s))) { lang = LANGS[0]; toast('Language reset to Any', ''); }
 });
 pillHandler('langPills', 'lang', LANGS, v => {
@@ -817,10 +987,13 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && roundOver && $('reveal').classList.contains('open')) newRound();
 });
 
-const nb = SONGS.filter(s => s.c === 'b').length, nh = SONGS.filter(s => s.c === 'h').length, ni = SONGS.filter(s => s.c === 'i').length;
-const nf = SONGS.filter(s => s.f === 1).length;
-$('catalogCount').textContent = `${SONGS.length} songs · ${nb} Bollywood · ${nh} Hollywood · ${ni} Indie · ${nf} famous hits`;
-applyPrefs(); renderPills(); renderChips(); renderTeams(); renderStats(); newRound();
+function renderCounts() {
+  const nb = SONGS.filter(s => s.c === 'b').length, nh = SONGS.filter(s => s.c === 'h').length,
+    ni = SONGS.filter(s => s.c === 'i').length, nm = SONGS.filter(s => s.c === 'my').length;
+  const nf = SONGS.filter(s => s.f === 1).length;
+  $('catalogCount').textContent = `${SONGS.length} songs · ${nb} Bollywood · ${nh} Hollywood · ${ni} Indie · ${nm} imported · ${nf} famous hits`;
+}
+applyPrefs(); renderPills(); renderChips(); renderTeams(); renderStats(); renderCounts(); newRound();
 </script>
 </body>
 </html>

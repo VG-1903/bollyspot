@@ -278,6 +278,7 @@ const CATS = [
   { id: 'both', label: 'All songs', test: () => true },
   { id: 'b', label: '🎬 Bollywood', test: s => s.c === 'b' },
   { id: 'h', label: '🎸 Hollywood', test: s => s.c === 'h' },
+  { id: 'i', label: '🎤 Indie', test: s => s.c === 'i' },
 ];
 const LANGS = [
   { id: 'any', label: 'Any language', test: () => true },
@@ -299,7 +300,7 @@ const DIFFS = [
   { id: 'expert', label: 'Expert', len: 0.25, pts: 100 },
   { id: 'imp', label: 'Impossible', len: 0.1, pts: 250 },
 ];
-const MAX_TRIES = 5;
+const MAX_TRIES = 3;
 const PREVIEW = 30;
 
 let cat = CATS[0], lang = LANGS[0], era = ERAS[0], diff = DIFFS[0];
@@ -322,7 +323,27 @@ let stopTimer = null, cursorTimer = null;
 function norm(s) {
   return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '');
 }
-SONGS.forEach(s => { s.k = norm(s.t); s.search = norm(s.t + ' ' + (s.m || '') + ' ' + s.a); });
+function words(s) {
+  return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(Boolean);
+}
+SONGS.forEach(s => {
+  s.k = norm(s.t);
+  s.search = norm(s.t + ' ' + (s.m || '') + ' ' + s.a);
+  s.tw = words(s.t);
+  s.ow = words((s.m || '') + ' ' + s.a);
+});
+function lev1(a, b) {
+  if (Math.abs(a.length - b.length) > 1) return false;
+  let i = 0, j = 0, edits = 0;
+  while (i < a.length && j < b.length) {
+    if (a[i] === b[j]) { i++; j++; continue; }
+    if (++edits > 1) return false;
+    if (a.length > b.length) i++;
+    else if (b.length > a.length) j++;
+    else { i++; j++; }
+  }
+  return edits + (a.length - i) + (b.length - j) <= 1;
+}
 
 function pool() {
   const p = SONGS.filter(s => cat.test(s) && lang.test(s) && era.test(s.y));
@@ -485,11 +506,40 @@ function endRound(won) {
 /* ---- autocomplete ---- */
 let sel = -1, sugItems = [];
 function closeSuggest() { $('suggest').classList.remove('open'); sel = -1; sugItems = []; }
+function matchScore(s, qtoks) {
+  // every query token must prefix-match a word in title (best), movie/artist (ok)
+  let score = 0;
+  for (const qt of qtoks) {
+    if (s.tw.some(w => w.startsWith(qt))) { score += 0; }
+    else if (s.ow.some(w => w.startsWith(qt))) { score += 2; }
+    else if (s.search.includes(qt)) { score += 4; }
+    else return null;
+  }
+  if (s.tw.length && s.tw[0].startsWith(qtoks[0])) score -= 1; // starts the title
+  return score;
+}
 function updateSuggest() {
-  const q = norm($('guess').value);
+  const raw = $('guess').value;
+  const q = norm(raw);
   if (q.length < 2) { closeSuggest(); return; }
+  const qtoks = words(raw);
   const inScope = SONGS.filter(s => cat.test(s) && lang.test(s));
-  sugItems = inScope.filter(s => s.search.includes(q)).slice(0, 8);
+  let scored = [];
+  for (const s of inScope) {
+    const sc = matchScore(s, qtoks);
+    if (sc !== null) scored.push([sc, s]);
+  }
+  if (!scored.length) {
+    // typo tolerance: allow one letter off against title words
+    for (const s of inScope) {
+      if (qtoks.every(qt => qt.length >= 4
+          ? s.tw.some(w => w.startsWith(qt) || lev1(qt, w.slice(0, qt.length)))
+          : s.tw.some(w => w.startsWith(qt)) || s.ow.some(w => w.startsWith(qt))))
+        scored.push([6, s]);
+    }
+  }
+  scored.sort((a, b) => a[0] - b[0] || a[1].t.length - b[1].t.length);
+  sugItems = scored.slice(0, 8).map(x => x[1]);
   if (!sugItems.length) { closeSuggest(); return; }
   $('suggest').innerHTML = sugItems.map((s, i) =>
     `<div class="sug" data-i="${i}">${s.t}<small>${s.m ? s.m + ' · ' : ''}${s.a}</small></div>`).join('');
@@ -576,8 +626,8 @@ document.addEventListener('keydown', e => {
   }
 });
 
-const nb = SONGS.filter(s => s.c === 'b').length, nh = SONGS.length - nb;
-$('catalogCount').textContent = `${SONGS.length} songs · ${nb} Bollywood · ${nh} Hollywood`;
+const nb = SONGS.filter(s => s.c === 'b').length, nh = SONGS.filter(s => s.c === 'h').length, ni = SONGS.filter(s => s.c === 'i').length;
+$('catalogCount').textContent = `${SONGS.length} songs · ${nb} Bollywood · ${nh} Hollywood · ${ni} Indie`;
 applyPrefs(); renderPills(); renderStats(); newRound();
 </script>
 </body>

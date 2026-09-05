@@ -32,40 +32,59 @@
     color: var(--text);
     overflow-x: hidden;
   }
-  .stage { min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 24px 16px 60px; position: relative; }
+  .stage { min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px 14px 40px; position: relative; }
   .spotlight {
     position: fixed; inset: 0; pointer-events: none; z-index: 0;
     background:
-      radial-gradient(ellipse 60% 45% at 50% 30%, rgba(var(--a1-rgb), .16), transparent 65%),
-      radial-gradient(ellipse 45% 35% at 50% 38%, rgba(var(--a2-rgb), .10), transparent 70%);
+      radial-gradient(ellipse 60% 45% at 50% 28%, rgba(var(--a1-rgb), .17), transparent 65%),
+      radial-gradient(ellipse 45% 35% at 50% 36%, rgba(var(--a2-rgb), .11), transparent 70%);
   }
-  .wrap { position: relative; z-index: 1; width: 100%; max-width: 580px; display: flex; flex-direction: column; align-items: center; }
+  .wrap { position: relative; z-index: 1; width: 100%; max-width: 600px; display: flex; flex-direction: column; align-items: center; }
   h1.logo {
-    font-size: clamp(2.2rem, 7vw, 3.2rem); margin: 6px 0 2px; letter-spacing: -.02em;
+    font-size: clamp(2rem, 7vw, 3rem); margin: 2px 0 0; letter-spacing: -.02em;
     background: linear-gradient(100deg, var(--a1), var(--a2));
     -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 800;
   }
-  .tagline { color: var(--muted); margin: 0 0 18px; font-size: .95rem; }
+  .tagline { color: var(--muted); margin: 2px 0 14px; font-size: .9rem; }
 
-  .pills { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 10px; }
+  .pills { display: flex; flex-wrap: wrap; gap: 7px; justify-content: center; margin-bottom: 9px; }
   .pill {
     background: var(--pill); color: var(--muted); border: 1px solid var(--line);
-    padding: 7px 14px; border-radius: 999px; cursor: pointer; font-size: .85rem; transition: all .15s;
+    padding: 6px 13px; border-radius: 999px; cursor: pointer; font-size: .84rem; transition: all .15s;
+    user-select: none;
   }
   .pill:hover { color: var(--text); border-color: #4a3a68; }
   .pill.active { color: #14100a; font-weight: 700; border-color: transparent; }
   .pills.cat .pill.active { background: linear-gradient(100deg, var(--a1), var(--a2)); color: #fff; }
-  .pills.lang .pill.active { background: var(--text); }
+  .pills.lang .pill.active, .pills.mood .pill.active, .pills.fame .pill.active { background: var(--text); }
   .pills.era .pill.active { background: var(--a1); }
   .pills.diff .pill.active { background: var(--a2); color: #fff; }
+  .pills.tries .pill.active { background: var(--a1); }
+  .rowlabel { font-size: .68rem; letter-spacing: .12em; text-transform: uppercase; color: #6d6384; margin: 2px 0 4px; }
 
-  .stats { display: flex; gap: 22px; color: var(--muted); font-size: .85rem; margin: 6px 0 0; }
-  .stats b { color: var(--a1); font-size: 1.05rem; }
+  .chipbar { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 8px; }
+  .chip {
+    background: var(--panel2); border: 1px solid var(--a1); color: var(--a1);
+    border-radius: 999px; padding: 5px 12px; font-size: .82rem; cursor: pointer;
+  }
+  .chip b { font-weight: 800; }
 
-  .playzone { margin: 20px 0 6px; display: flex; flex-direction: column; align-items: center; width: 100%; }
-  .playrow { display: flex; align-items: center; gap: 22px; }
+  .teambar { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin: 4px 0 6px; }
+  .teamchip {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 7px 14px; font-size: .88rem; color: var(--muted); cursor: pointer; transition: all .2s;
+  }
+  .teamchip b { color: var(--text); }
+  .teamchip .tscore { color: var(--a1); font-weight: 800; margin-left: 6px; }
+  .teamchip.turn { border-color: var(--a1); box-shadow: 0 0 18px rgba(var(--a1-rgb), .35); color: var(--text); }
+
+  .stats { display: flex; gap: 20px; color: var(--muted); font-size: .84rem; margin: 4px 0 0; }
+  .stats b { color: var(--a1); font-size: 1.02rem; }
+
+  .playzone { margin: 16px 0 4px; display: flex; flex-direction: column; align-items: center; width: 100%; }
+  .playrow { display: flex; align-items: center; gap: 20px; }
   .playbtn {
-    width: 120px; height: 120px; border-radius: 50%;
+    width: 112px; height: 112px; border-radius: 50%;
     background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.55), var(--a1) 55%, var(--a2));
     border: none; cursor: pointer; display: grid; place-items: center;
     box-shadow: 0 0 60px rgba(var(--a1-rgb), .35), 0 0 120px rgba(var(--a2-rgb), .15);
@@ -73,28 +92,28 @@
   }
   .playbtn:hover { transform: scale(1.05); }
   .playbtn:active { transform: scale(.97); }
-  .playbtn svg { width: 44px; height: 44px; fill: #14100a; margin-left: 6px; }
+  .playbtn svg { width: 42px; height: 42px; fill: #14100a; margin-left: 6px; }
   .playbtn.playing svg { margin-left: 0; }
   .playbtn.pulse { animation: pulse 1.4s ease-out infinite; }
   @keyframes pulse {
     0% { box-shadow: 0 0 60px rgba(var(--a1-rgb), .35), 0 0 0 0 rgba(var(--a1-rgb), .45); }
     100% { box-shadow: 0 0 60px rgba(var(--a1-rgb), .35), 0 0 0 42px rgba(var(--a1-rgb), 0); }
   }
-  .sniplen { font-family: Consolas, monospace; font-size: 1.3rem; color: var(--a1); min-width: 70px; text-align: left; }
+  .sniplen { font-family: Consolas, monospace; font-size: 1.25rem; color: var(--a1); min-width: 66px; text-align: left; }
 
-  .timeline { width: 100%; max-width: 420px; margin-top: 18px; position: relative; height: 26px; }
+  .timeline { width: 100%; max-width: 430px; margin-top: 16px; position: relative; height: 26px; }
   .tl-bar { position: absolute; top: 9px; left: 0; right: 0; height: 8px; border-radius: 4px; background: var(--pill); overflow: hidden; }
   .tl-fill { height: 100%; width: 0%; border-radius: 4px; background: linear-gradient(90deg, var(--a1), var(--a2)); transition: width .25s; }
   .tl-cursor { position: absolute; top: 6px; width: 2px; height: 14px; background: #fff; opacity: 0; transition: opacity .2s; }
   .tl-tick { position: absolute; top: 9px; width: 2px; height: 8px; background: #4a3a68; }
   .tl-label { position: absolute; top: -8px; font-size: .68rem; color: var(--muted); transform: translateX(-50%); }
 
-  .attempts { display: flex; gap: 8px; margin-top: 12px; }
+  .attempts { display: flex; gap: 8px; margin-top: 11px; }
   .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--line); }
   .dot.used { background: var(--red); }
   .dot.current { background: var(--a1); }
 
-  .controls { display: flex; gap: 10px; width: 100%; margin-top: 18px; }
+  .controls { display: flex; gap: 9px; width: 100%; margin-top: 16px; }
   .guessbox { position: relative; flex: 1; }
   .guessbox input {
     width: 100%; padding: 13px 16px; border-radius: 12px; background: var(--panel);
@@ -103,7 +122,7 @@
   .guessbox input:focus { border-color: var(--a1); }
   .btn {
     background: var(--panel); color: var(--muted); border: 1px solid var(--line);
-    border-radius: 12px; padding: 0 16px; cursor: pointer; font-size: .92rem;
+    border-radius: 12px; padding: 0 15px; cursor: pointer; font-size: .9rem;
     transition: all .15s; white-space: nowrap;
   }
   .btn:hover { color: var(--text); border-color: #4a3a68; }
@@ -111,7 +130,7 @@
   .suggest {
     position: absolute; left: 0; right: 0; bottom: calc(100% + 6px);
     background: var(--panel2); border: 1px solid var(--line); border-radius: 12px;
-    max-height: 260px; overflow-y: auto; display: none; z-index: 5;
+    max-height: 262px; overflow-y: auto; display: none; z-index: 5;
     box-shadow: 0 -8px 30px rgba(0,0,0,.5);
   }
   .suggest.open { display: block; }
@@ -120,56 +139,62 @@
   .sug small { color: var(--muted); display: block; }
   .sug:hover, .sug.sel { background: #2c2244; }
 
-  .msg { min-height: 24px; margin-top: 14px; font-size: .95rem; color: var(--muted); text-align: center; }
-
+  .msg { min-height: 22px; margin-top: 12px; font-size: .93rem; color: var(--muted); text-align: center; }
   .shake { animation: shake .35s; }
   @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-8px)} 75%{transform:translateX(8px)} }
 
-  /* toasts */
-  .toasts { position: fixed; top: 18px; left: 50%; transform: translateX(-50%); z-index: 50; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; }
+  /* toasts — above everything */
+  .toasts { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 90; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; width: max-content; max-width: 92vw; }
   .toast {
-    padding: 12px 22px; border-radius: 14px; font-weight: 700; font-size: 1rem;
-    background: var(--panel2); border: 1px solid var(--line); color: var(--text);
-    box-shadow: 0 10px 40px rgba(0,0,0,.6); animation: toastin .25s cubic-bezier(.2,1.4,.4,1);
-    display: flex; align-items: center; gap: 10px;
+    padding: 14px 26px; border-radius: 16px; font-weight: 800; font-size: 1.08rem;
+    background: var(--panel2); border: 2px solid var(--line); color: var(--text);
+    box-shadow: 0 12px 44px rgba(0,0,0,.65); animation: toastin .3s cubic-bezier(.2,1.4,.4,1);
+    text-align: center;
   }
   .toast.out { animation: toastout .3s forwards; }
-  .toast.good { border-color: var(--green); color: var(--green); background: #10271c; }
-  .toast.bad { border-color: var(--red); color: var(--red); background: #2b131c; }
-  @keyframes toastin { from { transform: translateY(-30px) scale(.85); opacity: 0; } }
-  @keyframes toastout { to { transform: translateY(-20px); opacity: 0; } }
+  .toast.good { border-color: var(--green); color: var(--green); background: #0f2b1d; }
+  .toast.bad { border-color: var(--red); color: var(--red); background: #2f1420; }
+  @keyframes toastin { from { transform: translateY(-34px) scale(.8); opacity: 0; } }
+  @keyframes toastout { to { transform: translateY(-22px); opacity: 0; } }
 
+  /* reveal — centered modal, no scrolling needed */
+  .rscrim { position: fixed; inset: 0; z-index: 60; background: rgba(5,3,10,.72); backdrop-filter: blur(3px); display: none; }
+  .rscrim.open { display: block; animation: fadein .2s; }
+  @keyframes fadein { from { opacity: 0; } }
   .reveal {
-    display: none; width: 100%; margin-top: 20px; background: var(--panel);
-    border: 1px solid var(--line); border-radius: 18px; padding: 20px; text-align: center;
+    position: fixed; z-index: 61; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    width: min(420px, 92vw); display: none;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 20px;
+    padding: 22px; text-align: center; box-shadow: 0 30px 80px rgba(0,0,0,.7);
   }
   .reveal.open { display: block; animation: pop .3s; }
-  @keyframes pop { from { transform: scale(.92); opacity: 0; } }
-  .reveal img { width: 130px; height: 130px; border-radius: 12px; object-fit: cover; box-shadow: 0 8px 30px rgba(0,0,0,.5); }
-  .reveal .rtitle { font-size: 1.25rem; font-weight: 700; margin: 12px 0 2px; }
+  @keyframes pop { from { transform: translate(-50%,-50%) scale(.9); opacity: 0; } }
+  .reveal img { width: 132px; height: 132px; border-radius: 14px; object-fit: cover; box-shadow: 0 8px 30px rgba(0,0,0,.5); }
+  .reveal .rtitle { font-size: 1.3rem; font-weight: 800; margin: 12px 0 2px; }
   .reveal .rmeta { color: var(--muted); font-size: .92rem; }
-  .reveal .verdict { font-weight: 800; font-size: .95rem; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 8px; }
+  .reveal .verdict { font-weight: 800; font-size: 1rem; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 10px; }
   .reveal .verdict.good { color: var(--green); }
   .reveal .verdict.bad { color: var(--red); }
-  .reveal .actions { display: flex; gap: 10px; justify-content: center; margin-top: 16px; }
-  .btn.primary { background: linear-gradient(100deg, var(--a1), var(--a2)); color: #fff; font-weight: 700; border: none; padding: 12px 22px; }
+  .reveal .actions { display: flex; gap: 10px; justify-content: center; margin-top: 18px; }
+  .btn.primary { background: linear-gradient(100deg, var(--a1), var(--a2)); color: #fff; font-weight: 700; border: none; padding: 13px 24px; font-size: 1rem; }
   .btn.primary:hover { filter: brightness(1.15); color: #fff; }
+  .reveal .btn { padding: 13px 16px; }
 
   /* menu */
   .menubtn {
-    position: fixed; top: 16px; left: 16px; z-index: 40;
+    position: fixed; top: 14px; left: 14px; z-index: 70;
     width: 42px; height: 42px; border-radius: 12px; background: var(--panel);
     border: 1px solid var(--line); color: var(--text); cursor: pointer; font-size: 1.2rem;
   }
   .drawer {
-    position: fixed; top: 0; left: 0; bottom: 0; width: 290px; z-index: 45;
+    position: fixed; top: 0; left: 0; bottom: 0; width: min(310px, 86vw); z-index: 75;
     background: var(--panel2); border-right: 1px solid var(--line);
-    transform: translateX(-100%); transition: transform .25s; padding: 20px;
+    transform: translateX(-100%); transition: transform .25s; padding: 18px;
     overflow-y: auto;
   }
   .drawer.open { transform: translateX(0); }
-  .drawer h3 { margin: 18px 0 10px; font-size: .8rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
-  .drawer h3:first-of-type { margin-top: 8px; }
+  .drawer h3 { margin: 16px 0 8px; font-size: .78rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+  .drawer h3:first-of-type { margin-top: 6px; }
   .swatches { display: flex; gap: 10px; }
   .swatch { width: 34px; height: 34px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; }
   .swatch.active { border-color: #fff; }
@@ -177,19 +202,35 @@
   .sw-green { background: linear-gradient(120deg, #3ddc84, #1db954); }
   .sw-blue { background: linear-gradient(120deg, #4dc3ff, #7a5cff); }
   .sw-pink { background: linear-gradient(120deg, #ff4da6, #ff8a5c); }
-  .drawer label.row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; font-size: .92rem; color: var(--text); cursor: pointer; }
-  .drawer input[type="range"] { width: 130px; accent-color: var(--a1); }
+  .drawer label.row { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; font-size: .92rem; color: var(--text); cursor: pointer; gap: 10px; }
+  .drawer input[type="range"] { width: 120px; accent-color: var(--a1); }
   .drawer input[type="checkbox"] { accent-color: var(--a1); width: 18px; height: 18px; }
+  .drawer input[type="text"] {
+    width: 100%; padding: 10px 12px; border-radius: 10px; background: var(--panel);
+    color: var(--text); border: 1px solid var(--line); font-size: .92rem; outline: none;
+  }
   .drawer .btn { width: 100%; padding: 10px; margin-top: 6px; }
-  .scrim { position: fixed; inset: 0; z-index: 44; background: rgba(0,0,0,.5); display: none; }
+  .drawer .minipills { display: flex; gap: 6px; flex-wrap: wrap; }
+  .drawer .minipills .pill { padding: 6px 12px; }
+  .drawer .minipills .pill.active { background: var(--a1); }
+  .scrim { position: fixed; inset: 0; z-index: 72; background: rgba(0,0,0,.5); display: none; }
   .scrim.open { display: block; }
-  .drawer .count { color: var(--muted); font-size: .8rem; margin-top: 14px; }
+  .drawer .count { color: var(--muted); font-size: .78rem; margin-top: 14px; line-height: 1.5; }
 
-  footer { position: relative; z-index: 1; margin-top: auto; padding-top: 30px; color: #5d5472; font-size: .78rem; text-align: center; }
-  @media (max-width: 500px) {
+  footer { position: relative; z-index: 1; margin-top: auto; padding-top: 26px; color: #5d5472; font-size: .76rem; text-align: center; }
+
+  @media (max-width: 520px) {
+    .stage { padding: 14px 10px 30px; }
     .controls { flex-direction: column; }
-    .btn { padding: 12px; }
+    .controls .btn { padding: 13px; }
+    .playbtn { width: 96px; height: 96px; }
+    .playbtn svg { width: 36px; height: 36px; }
+    .pill { padding: 6px 11px; font-size: .8rem; }
     .playrow { gap: 14px; }
+    .stats { gap: 14px; }
+    .reveal .actions { flex-direction: column; }
+    .menubtn { top: 10px; left: 10px; }
+    h1.logo { margin-top: 34px; }
   }
 </style>
 </head>
@@ -197,6 +238,12 @@
 <button class="menubtn" id="menuBtn" title="Options">☰</button>
 <div class="scrim" id="scrim"></div>
 <div class="drawer" id="drawer">
+  <h3>Teams (pass &amp; play)</h3>
+  <div class="minipills" id="teamPills"></div>
+  <h3>Artist filter</h3>
+  <input type="text" id="artistInput" list="artistList" placeholder="Type an artist…">
+  <datalist id="artistList"></datalist>
+  <button class="btn" id="artistClear">Clear artist</button>
   <h3>Spotlight</h3>
   <div class="swatches" id="swatches">
     <div class="swatch sw-gold active" data-spot="gold" title="Gold"></div>
@@ -206,6 +253,7 @@
   </div>
   <h3>Gameplay</h3>
   <label class="row">From the start <input type="checkbox" id="fromStart"></label>
+  <label class="row">Sound effects <input type="checkbox" id="sfx" checked></label>
   <label class="row">Volume <input type="range" id="volume" min="0" max="100" value="90"></label>
   <h3>Danger zone</h3>
   <button class="btn warn" id="resetStats">Reset score &amp; stats</button>
@@ -221,8 +269,16 @@
 
     <div class="pills cat" id="catPills"></div>
     <div class="pills lang" id="langPills"></div>
+    <div class="pills mood" id="moodPills"></div>
     <div class="pills era" id="eraPills"></div>
+    <div class="pills fame" id="famePills"></div>
+    <div class="rowlabel">Hardness → clip time</div>
     <div class="pills diff" id="diffPills"></div>
+    <div class="rowlabel">Tries</div>
+    <div class="pills tries" id="triesPills"></div>
+
+    <div class="chipbar" id="chipbar"></div>
+    <div class="teambar" id="teambar"></div>
 
     <div class="stats">
       <span>Score <b id="score">0</b></span>
@@ -249,23 +305,25 @@
         <div class="suggest" id="suggest"></div>
         <input id="guess" type="text" placeholder="Name that track…" autocomplete="off" spellcheck="false">
       </div>
-      <button class="btn" id="moreBtn" title="Doubles the clip, costs an attempt">+ Time</button>
+      <button class="btn" id="moreBtn" title="Doubles the clip, costs a try">+ Time</button>
       <button class="btn warn" id="skipBtn">Give up ▸</button>
     </div>
 
     <div class="msg" id="msg"></div>
+  </div>
 
-    <div class="reveal" id="reveal">
-      <div class="verdict" id="verdict"></div>
-      <img id="rArt" alt="album art">
-      <div class="rtitle" id="rTitle"></div>
-      <div class="rmeta" id="rMeta"></div>
-      <div class="actions">
-        <button class="btn" id="fullBtn">▶ Play preview</button>
-        <button class="btn primary" id="nextBtn">Next song ⟶</button>
-      </div>
+  <div class="rscrim" id="rscrim"></div>
+  <div class="reveal" id="reveal">
+    <div class="verdict" id="verdict"></div>
+    <img id="rArt" alt="album art">
+    <div class="rtitle" id="rTitle"></div>
+    <div class="rmeta" id="rMeta"></div>
+    <div class="actions">
+      <button class="btn" id="fullBtn">▶ Play preview</button>
+      <button class="btn primary" id="nextBtn">Next song ⟶</button>
     </div>
   </div>
+
   <footer>Fan-made guessing game · 30-sec previews &amp; artwork courtesy of the iTunes Search API · not affiliated with anyone</footer>
 </div>
 
@@ -285,6 +343,11 @@ const LANGS = [
   { id: 'hi', label: 'हिंदी Hindi', test: s => s.l === 'hi' },
   { id: 'en', label: 'English', test: s => s.l === 'en' },
 ];
+const MOODS = [
+  { id: 'any', label: 'Any mood', test: () => true },
+  { id: 'p', label: '⚡ Peppy', test: s => s.mood === 'p' },
+  { id: 's', label: '💔 Sad', test: s => s.mood === 's' },
+];
 const ERAS = [
   { id: 'any', label: 'Any era', test: () => true },
   { id: 'classic', label: 'Classic', test: y => y > 0 && y < 1990 },
@@ -293,6 +356,10 @@ const ERAS = [
   { id: '2010s', label: '2010s', test: y => y >= 2010 && y < 2020 },
   { id: '2020s', label: '2020s', test: y => y >= 2020 },
 ];
+const FAMES = [
+  { id: 'fam', label: '🔥 Famous hits', test: s => s.f === 1 },
+  { id: 'all', label: 'Include deep cuts', test: () => true },
+];
 const DIFFS = [
   { id: 'easy', label: 'Easy', len: 3.0, pts: 10 },
   { id: 'medium', label: 'Medium', len: 1.0, pts: 25 },
@@ -300,14 +367,17 @@ const DIFFS = [
   { id: 'expert', label: 'Expert', len: 0.25, pts: 100 },
   { id: 'imp', label: 'Impossible', len: 0.1, pts: 250 },
 ];
-const MAX_TRIES = 3;
+const TRIES = [3, 4, 5, 6];
 const PREVIEW = 30;
 
-let cat = CATS[0], lang = LANGS[0], era = ERAS[0], diff = DIFFS[0];
+let cat = CATS[0], lang = LANGS[0], mood = MOODS[0], era = ERAS[0], fame = FAMES[0], diff = DIFFS[0];
+let maxTries = 5;
+let artistFilter = '';
+let teams = [], turn = 0;
 let current = null, offset = 0, tries = 0, roundOver = false;
 let score = 0, streak = 0, best = 0;
 let played = new Set();
-let prefs = { spot: 'gold', fromStart: false, volume: 90 };
+let prefs = { spot: 'gold', fromStart: false, volume: 90, sfx: true };
 
 try {
   const s = JSON.parse(localStorage.getItem('bollyspot') || '{}');
@@ -320,18 +390,13 @@ const audio = new Audio();
 audio.preload = 'auto';
 let stopTimer = null, cursorTimer = null;
 
+/* ---- text utils ---- */
 function norm(s) {
   return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '');
 }
 function words(s) {
   return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(Boolean);
 }
-SONGS.forEach(s => {
-  s.k = norm(s.t);
-  s.search = norm(s.t + ' ' + (s.m || '') + ' ' + s.a);
-  s.tw = words(s.t);
-  s.ow = words((s.m || '') + ' ' + s.a);
-});
 function lev1(a, b) {
   if (Math.abs(a.length - b.length) > 1) return false;
   let i = 0, j = 0, edits = 0;
@@ -345,39 +410,123 @@ function lev1(a, b) {
   return edits + (a.length - i) + (b.length - j) <= 1;
 }
 
+/* ---- mood heuristic (keyword based, approximate) ---- */
+const SADW = ['sad','judaa','judai','judaai','bewafa','tanha','tanhai','akela','akele','alvida','dard','aansu','ansoo','aansoo','rona','royenge','gham','bichhad','bichad','yaad','intezaar','intezar','tadap','doori','dooriyan','khamoshi','adhura','adhoora','toota','tuta','bhula','bhoola','kyun','kyu','ashq','zakhm','sisak','beqarar','bekarar','bekhabar','majburi','majboori','viraan','tears','cry','crying','broken','hurt','alone','lonely','goodbye','sorry','miss you','without you','pain','scars','fix you','someone like you','let her go','stay with me','jealous','hello','when i was your man','all i want','skinny love','say something','hurts','too good at goodbyes','before you go','memories','ghost','fall apart','drivers license','traitor','happier','when the party'];
+const PEPW = ['party','dance','naach','nachle','nach','jhoom','jhume','jhumka','dhoom','balle','shava','desi','swag','gabru','badtameez','chashma','kudi','patola','bam bam','dhol','dhinka','zingaat','gallan','tunak','twist','shake','masti','mast','dham','halla','hungama','celebration','happy','tonight','feel good','groove','jump','dynamite','uptown funk','can’t stop','cant stop','shut up and dance','24k','levitating','don’t start now','dont start now','blinding lights','shape of you','cheap thrills','timber','firework','roar','shake it off','style','sorry not','gasolina','despacito','saturday','disco','rock and roll','footloose','dancing queen','stayin','september','celebrate'];
+function moodOf(s) {
+  const t = (s.t + ' ' + (s.m || '')).toLowerCase();
+  for (const w of PEPW) if (t.includes(w)) return 'p';
+  for (const w of SADW) if (t.includes(w)) return 's';
+  return 'n';
+}
+SONGS.forEach(s => {
+  s.k = norm(s.t);
+  s.search = norm(s.t + ' ' + (s.m || '') + ' ' + s.a);
+  s.tw = words(s.t);
+  s.ow = words((s.m || '') + ' ' + s.a);
+  s.mood = moodOf(s);
+});
+
+/* ---- artist index ---- */
+const artistCount = {};
+SONGS.forEach(s => s.a.split(/,|&|feat\.?/i).forEach(a => {
+  a = a.trim(); if (a.length > 2) artistCount[a] = (artistCount[a] || 0) + 1;
+}));
+const topArtists = Object.entries(artistCount).filter(x => x[1] >= 8).sort((a, b) => b[1] - a[1]).map(x => x[0]);
+$('artistList').innerHTML = topArtists.slice(0, 400).map(a => `<option value="${a.replace(/"/g, '&quot;')}">`).join('');
+
+/* ---- pool with progressive relaxation ---- */
+function baseFilters(s) { return cat.test(s) && lang.test(s); }
+function artistTest(s) { return !artistFilter || s.a.toLowerCase().includes(artistFilter.toLowerCase()); }
 function pool() {
-  const p = SONGS.filter(s => cat.test(s) && lang.test(s) && era.test(s.y));
-  return p.length ? p : SONGS;
+  const tiers = [
+    s => baseFilters(s) && era.test(s.y) && mood.test(s) && fame.test(s) && artistTest(s),
+    s => baseFilters(s) && era.test(s.y) && mood.test(s) && artistTest(s),
+    s => baseFilters(s) && era.test(s.y) && artistTest(s),
+    s => baseFilters(s) && artistTest(s),
+    s => baseFilters(s),
+    () => true,
+  ];
+  for (const t of tiers) {
+    const p = SONGS.filter(t);
+    if (p.length >= 5) return p;
+  }
+  return SONGS;
 }
 function snipSecs() { return Math.min(12, diff.len * Math.pow(2, tries)); }
 function fmt(v) { return (+v.toFixed(2)) + 's'; }
 
+/* ---- sound effects (WebAudio, no assets) ---- */
+let actx = null;
+function sfx(kind) {
+  if (!prefs.sfx) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    if (actx.state === 'suspended') actx.resume();
+    const vol = Math.max(.02, prefs.volume / 100 * .5);
+    const t0 = actx.currentTime;
+    function tone(freq, start, dur, type, v) {
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = type; o.frequency.value = freq;
+      g.gain.setValueAtTime(0, t0 + start);
+      g.gain.linearRampToValueAtTime(v, t0 + start + .015);
+      g.gain.exponentialRampToValueAtTime(.001, t0 + start + dur);
+      o.connect(g); g.connect(actx.destination);
+      o.start(t0 + start); o.stop(t0 + start + dur + .05);
+    }
+    if (kind === 'good') { tone(659, 0, .18, 'sine', vol); tone(784, .11, .18, 'sine', vol); tone(1047, .22, .3, 'sine', vol); }
+    else if (kind === 'bad') { tone(196, 0, .3, 'sawtooth', vol * .8); tone(147, .12, .35, 'sawtooth', vol * .8); }
+    else { tone(523, 0, .1, 'triangle', vol * .7); }
+  } catch (e) {}
+}
+
+/* ---- persistence / rendering ---- */
 function save() {
   try { localStorage.setItem('bollyspot', JSON.stringify({ score, streak, best, prefs })); } catch (e) {}
 }
 function renderStats() {
   $('score').textContent = score; $('streak').textContent = streak; $('best').textContent = best;
 }
-function pillRow(elId, items, active, key) {
+function pillRow(elId, items, active, key, labelFn) {
   $(elId).innerHTML = items.map(x =>
-    `<button class="pill ${x === active ? 'active' : ''}" data-${key}="${x.id}">${x.label}</button>`).join('');
+    `<button class="pill ${x === active ? 'active' : ''}" data-${key}="${typeof x === 'object' ? x.id : x}">${labelFn ? labelFn(x) : x.label}</button>`).join('');
 }
 function renderPills() {
   pillRow('catPills', CATS, cat, 'cat');
   pillRow('langPills', LANGS, lang, 'lang');
+  pillRow('moodPills', MOODS, mood, 'mood');
   pillRow('eraPills', ERAS, era, 'era');
+  pillRow('famePills', FAMES, fame, 'fame');
   pillRow('diffPills', DIFFS, diff, 'diff');
+  pillRow('triesPills', TRIES, maxTries, 'tries', x => x + ' tries');
+}
+function renderChips() {
+  $('chipbar').innerHTML = artistFilter
+    ? `<div class="chip" id="artistChip">🎙 <b>${artistFilter}</b> ✕</div>` : '';
+  const c = $('artistChip');
+  if (c) c.onclick = () => { artistFilter = ''; $('artistInput').value = ''; renderChips(); newRound(); };
+}
+function renderTeams() {
+  $('teambar').innerHTML = teams.map((t, i) =>
+    `<div class="teamchip ${i === turn ? 'turn' : ''}" data-team="${i}" title="Click to rename">${i === turn ? '▶ ' : ''}<b>${t.name}</b><span class="tscore">${t.score}</span></div>`).join('');
+  document.querySelectorAll('.teamchip').forEach(el => {
+    el.onclick = () => {
+      const i = +el.dataset.team;
+      const name = prompt('Team name:', teams[i].name);
+      if (name && name.trim()) { teams[i].name = name.trim().slice(0, 14); renderTeams(); }
+    };
+  });
+  pillRow('teamPills', [0, 2, 3, 4], teams.length || 0, 'teams', x => x === 0 ? 'Off' : x + ' teams');
 }
 function renderTimeline() {
   const len = snipSecs();
   $('tlFill').style.width = (len / PREVIEW * 100) + '%';
   const tl = $('timeline');
   tl.querySelectorAll('.tl-tick, .tl-label').forEach(el => el.remove());
-  for (let i = tries + 1; i < MAX_TRIES; i++) {
+  for (let i = tries + 1; i < maxTries; i++) {
     const l = Math.min(12, diff.len * Math.pow(2, i));
-    const x = l / PREVIEW * 100;
     const tick = document.createElement('div');
-    tick.className = 'tl-tick'; tick.style.left = x + '%';
+    tick.className = 'tl-tick'; tick.style.left = (l / PREVIEW * 100) + '%';
     tl.appendChild(tick);
   }
   const lab = document.createElement('div');
@@ -387,7 +536,7 @@ function renderTimeline() {
 }
 function renderRound() {
   $('snipLen').textContent = fmt(snipSecs());
-  $('attempts').innerHTML = Array.from({ length: MAX_TRIES }, (_, i) =>
+  $('attempts').innerHTML = Array.from({ length: maxTries }, (_, i) =>
     `<div class="dot ${i < tries ? 'used' : i === tries ? 'current' : ''}"></div>`).join('');
   renderTimeline();
 }
@@ -397,8 +546,8 @@ function toast(text, kind) {
   t.className = 'toast ' + (kind || '');
   t.textContent = text;
   $('toasts').appendChild(t);
-  setTimeout(() => t.classList.add('out'), 1900);
-  setTimeout(() => t.remove(), 2250);
+  setTimeout(() => t.classList.add('out'), 2300);
+  setTimeout(() => t.remove(), 2650);
 }
 
 function newRound() {
@@ -412,12 +561,16 @@ function newRound() {
   offset = prefs.fromStart ? 0 : Math.random() * (PREVIEW - 13);
   audio.src = current.p;
   $('reveal').classList.remove('open');
+  $('rscrim').classList.remove('open');
   $('controls').style.display = '';
   $('guess').value = '';
-  $('msg').textContent = 'Hit play, then name that track';
+  $('msg').textContent = teams.length
+    ? `${teams[turn].name} — hit play and name that track`
+    : 'Hit play, then name that track';
   $('playBtn').classList.add('pulse');
   closeSuggest();
   renderRound();
+  renderTeams();
 }
 
 function stopAudio() {
@@ -460,7 +613,8 @@ function playFull() {
 
 function useTry(reason, kind) {
   tries++;
-  if (tries >= MAX_TRIES) { endRound(false); return; }
+  if (kind === 'bad') sfx('bad'); else sfx('hint');
+  if (tries >= maxTries) { endRound(false); return; }
   renderRound();
   toast(reason + ' — clip is now ' + fmt(snipSecs()), kind);
   $('controls').classList.add('shake');
@@ -484,30 +638,33 @@ function endRound(won) {
   closeSuggest();
   let gained = 0;
   if (won) {
-    gained = Math.max(5, Math.round(diff.pts * (1 - tries * 0.15)));
+    gained = Math.max(5, Math.round(diff.pts * (1 - (tries / maxTries) * 0.6)));
     score += gained; streak++;
     if (streak > best) best = streak;
-    toast(`✅ Correct! +${gained} pts`, 'good');
+    if (teams.length) teams[turn].score += gained;
+    sfx('good');
+    toast(`✅ Correct! +${gained} pts${teams.length ? ' for ' + teams[turn].name : ''}`, 'good');
   } else {
     streak = 0;
-    toast('❌ Out of luck — it was “' + current.t + '”', 'bad');
+    sfx('bad');
+    toast('❌ Out of tries — it was “' + current.t + '”', 'bad');
   }
-  save(); renderStats();
-  $('controls').style.display = 'none';
-  $('msg').textContent = '';
+  save(); renderStats(); renderTeams();
+  if (teams.length) turn = (turn + 1) % teams.length;
   $('verdict').textContent = won ? `Correct! +${gained} pts` : 'It was…';
   $('verdict').className = 'verdict ' + (won ? 'good' : 'bad');
   $('rArt').src = current.art || '';
   $('rTitle').textContent = current.t;
   $('rMeta').textContent = (current.m ? current.m + ' · ' : '') + current.a + (current.y ? ' · ' + current.y : '');
+  $('rscrim').classList.add('open');
   $('reveal').classList.add('open');
+  $('nextBtn').focus();
 }
 
-/* ---- autocomplete ---- */
+/* ---- smart autocomplete ---- */
 let sel = -1, sugItems = [];
 function closeSuggest() { $('suggest').classList.remove('open'); sel = -1; sugItems = []; }
 function matchScore(s, qtoks) {
-  // every query token must prefix-match a word in title (best), movie/artist (ok)
   let score = 0;
   for (const qt of qtoks) {
     if (s.tw.some(w => w.startsWith(qt))) { score += 0; }
@@ -515,7 +672,7 @@ function matchScore(s, qtoks) {
     else if (s.search.includes(qt)) { score += 4; }
     else return null;
   }
-  if (s.tw.length && s.tw[0].startsWith(qtoks[0])) score -= 1; // starts the title
+  if (s.tw.length && s.tw[0].startsWith(qtoks[0])) score -= 1;
   return score;
 }
 function updateSuggest() {
@@ -530,7 +687,6 @@ function updateSuggest() {
     if (sc !== null) scored.push([sc, s]);
   }
   if (!scored.length) {
-    // typo tolerance: allow one letter off against title words
     for (const s of inScope) {
       if (qtoks.every(qt => qt.length >= 4
           ? s.tw.some(w => w.startsWith(qt) || lev1(qt, w.slice(0, qt.length)))
@@ -547,12 +703,13 @@ function updateSuggest() {
   sel = -1;
 }
 
-/* ---- prefs / menu ---- */
+/* ---- prefs / drawer ---- */
 function applyPrefs() {
   document.body.dataset.spot = prefs.spot;
   document.querySelectorAll('.swatch').forEach(el =>
     el.classList.toggle('active', el.dataset.spot === prefs.spot));
   $('fromStart').checked = prefs.fromStart;
+  $('sfx').checked = prefs.sfx;
   $('volume').value = prefs.volume;
 }
 $('menuBtn').onclick = () => { $('drawer').classList.toggle('open'); $('scrim').classList.toggle('open', $('drawer').classList.contains('open')); };
@@ -566,10 +723,34 @@ $('fromStart').onchange = e => {
   prefs.fromStart = e.target.checked; save();
   if (!roundOver) offset = prefs.fromStart ? 0 : Math.random() * (PREVIEW - 13);
 };
+$('sfx').onchange = e => { prefs.sfx = e.target.checked; save(); if (prefs.sfx) sfx('good'); };
 $('volume').oninput = e => { prefs.volume = +e.target.value; audio.volume = prefs.volume / 100; save(); };
 $('resetStats').onclick = () => {
-  score = 0; streak = 0; best = 0; save(); renderStats();
+  score = 0; streak = 0; best = 0; teams.forEach(t => t.score = 0);
+  save(); renderStats(); renderTeams();
   toast('Stats reset', '');
+};
+$('artistInput').onchange = e => {
+  const v = e.target.value.trim();
+  if (!v) return;
+  artistFilter = v;
+  renderChips(); newRound();
+  toast('🎙 Playing only ' + v, '');
+};
+$('artistClear').onclick = () => {
+  artistFilter = ''; $('artistInput').value = ''; renderChips(); newRound();
+};
+$('teamPills').onclick = e => {
+  const b = e.target.closest('[data-teams]');
+  if (!b) return;
+  const n = +b.dataset.teams;
+  if (n === 0) { teams = []; turn = 0; }
+  else {
+    teams = Array.from({ length: n }, (_, i) => ({ name: 'Team ' + (i + 1), score: 0 }));
+    turn = 0;
+    toast('👥 ' + n + ' teams — pass the device each round!', '');
+  }
+  renderTeams(); newRound();
 };
 
 /* ---- events ---- */
@@ -603,9 +784,9 @@ function pillHandler(elId, key, items, assign) {
   $(elId).onclick = e => {
     const b = e.target.closest(`[data-${key}]`);
     if (!b) return;
-    assign(items.find(x => x.id === b.dataset[key]));
+    assign(items.find ? items.find(x => x.id === b.dataset[key]) : +b.dataset[key]);
     renderPills();
-    if (key === 'diff') { if (!roundOver) { tries = Math.min(tries, MAX_TRIES - 1); renderRound(); } }
+    if (key === 'diff' || key === 'tries') { if (!roundOver) { tries = Math.min(tries, maxTries - 1); renderRound(); } }
     else newRound();
   };
 }
@@ -617,18 +798,29 @@ pillHandler('langPills', 'lang', LANGS, v => {
   lang = v;
   if (!SONGS.some(s => cat.test(s) && lang.test(s))) { cat = CATS[0]; toast('Showing all catalogs', ''); }
 });
+pillHandler('moodPills', 'mood', MOODS, v => mood = v);
 pillHandler('eraPills', 'era', ERAS, v => era = v);
+pillHandler('famePills', 'fame', FAMES, v => fame = v);
 pillHandler('diffPills', 'diff', DIFFS, v => diff = v);
+$('triesPills').onclick = e => {
+  const b = e.target.closest('[data-tries]');
+  if (!b) return;
+  maxTries = +b.dataset.tries;
+  renderPills();
+  if (!roundOver) { tries = Math.min(tries, maxTries - 1); renderRound(); }
+};
 document.addEventListener('keydown', e => {
-  if (e.key === ' ' && document.activeElement !== $('guess')) {
+  if (e.key === ' ' && document.activeElement !== $('guess') && document.activeElement.tagName !== 'INPUT') {
     e.preventDefault();
     if (!roundOver) playSnippet();
   }
+  if (e.key === 'Enter' && roundOver && $('reveal').classList.contains('open')) newRound();
 });
 
 const nb = SONGS.filter(s => s.c === 'b').length, nh = SONGS.filter(s => s.c === 'h').length, ni = SONGS.filter(s => s.c === 'i').length;
-$('catalogCount').textContent = `${SONGS.length} songs · ${nb} Bollywood · ${nh} Hollywood · ${ni} Indie`;
-applyPrefs(); renderPills(); renderStats(); newRound();
+const nf = SONGS.filter(s => s.f === 1).length;
+$('catalogCount').textContent = `${SONGS.length} songs · ${nb} Bollywood · ${nh} Hollywood · ${ni} Indie · ${nf} famous hits`;
+applyPrefs(); renderPills(); renderChips(); renderTeams(); renderStats(); newRound();
 </script>
 </body>
 </html>

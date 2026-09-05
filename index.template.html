@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BollySpot — guess the Bollywood song</title>
+<style>
+  :root {
+    --bg: #0b0810;
+    --panel: #17121f;
+    --panel2: #1f1830;
+    --text: #f3edff;
+    --muted: #9a8fb0;
+    --gold: #ffb340;
+    --gold-dim: #b97f2a;
+    --pink: #ff4da6;
+    --green: #3ddc84;
+    --red: #ff5470;
+    --pill: #241c36;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow-x: hidden;
+  }
+  .stage {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px 60px;
+    position: relative;
+  }
+  .spotlight {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(ellipse 60% 45% at 50% 30%, rgba(255,179,64,.16), transparent 65%),
+      radial-gradient(ellipse 45% 35% at 50% 38%, rgba(255,77,166,.10), transparent 70%);
+  }
+  .wrap { position: relative; z-index: 1; width: 100%; max-width: 560px; display: flex; flex-direction: column; align-items: center; }
+  h1.logo {
+    font-size: clamp(2.2rem, 7vw, 3.4rem);
+    margin: 6px 0 2px;
+    letter-spacing: -.02em;
+    background: linear-gradient(100deg, var(--gold), var(--pink));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    font-weight: 800;
+  }
+  .tagline { color: var(--muted); margin: 0 0 22px; font-size: .95rem; }
+
+  .pills { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 12px; }
+  .pill {
+    background: var(--pill); color: var(--muted); border: 1px solid #322747;
+    padding: 7px 14px; border-radius: 999px; cursor: pointer; font-size: .85rem;
+    transition: all .15s;
+  }
+  .pill:hover { color: var(--text); border-color: #4a3a68; }
+  .pill.active { color: #14100a; font-weight: 700; border-color: transparent; }
+  .pills.era .pill.active { background: var(--gold); }
+  .pills.diff .pill.active { background: var(--pink); color: #fff; }
+
+  .stats { display: flex; gap: 22px; color: var(--muted); font-size: .85rem; margin: 8px 0 4px; }
+  .stats b { color: var(--gold); font-size: 1.05rem; }
+
+  .playzone { margin: 26px 0 10px; display: flex; flex-direction: column; align-items: center; }
+  .playbtn {
+    width: 128px; height: 128px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #ffd28a, var(--gold) 55%, #d88f1f);
+    border: none; cursor: pointer;
+    display: grid; place-items: center;
+    box-shadow: 0 0 60px rgba(255,179,64,.35), 0 0 120px rgba(255,77,166,.15);
+    transition: transform .12s;
+  }
+  .playbtn:hover { transform: scale(1.05); }
+  .playbtn:active { transform: scale(.97); }
+  .playbtn svg { width: 46px; height: 46px; fill: #14100a; margin-left: 6px; }
+  .playbtn.playing svg { margin-left: 0; }
+  .playbtn.pulse { animation: pulse 1.4s ease-out infinite; }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 60px rgba(255,179,64,.35), 0 0 0 0 rgba(255,179,64,.45); }
+    100% { box-shadow: 0 0 60px rgba(255,179,64,.35), 0 0 0 42px rgba(255,179,64,0); }
+  }
+  .sniplen { margin-top: 14px; font-family: Consolas, monospace; font-size: 1.15rem; color: var(--gold); }
+  .attempts { display: flex; gap: 8px; margin-top: 10px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #322747; }
+  .dot.used { background: var(--red); }
+  .dot.current { background: var(--gold); }
+
+  .controls { display: flex; gap: 10px; width: 100%; margin-top: 18px; }
+  .guessbox { position: relative; flex: 1; }
+  .guessbox input {
+    width: 100%; padding: 13px 16px; border-radius: 12px;
+    background: var(--panel); color: var(--text);
+    border: 1px solid #322747; font-size: 1rem; outline: none;
+  }
+  .guessbox input:focus { border-color: var(--gold-dim); }
+  .btn {
+    background: var(--panel); color: var(--muted); border: 1px solid #322747;
+    border-radius: 12px; padding: 0 18px; cursor: pointer; font-size: .95rem;
+    transition: all .15s; white-space: nowrap;
+  }
+  .btn:hover { color: var(--text); border-color: #4a3a68; }
+  .btn.warn:hover { color: var(--red); border-color: var(--red); }
+  .suggest {
+    position: absolute; left: 0; right: 0; bottom: calc(100% + 6px);
+    background: var(--panel2); border: 1px solid #322747; border-radius: 12px;
+    max-height: 260px; overflow-y: auto; display: none; z-index: 5;
+    box-shadow: 0 -8px 30px rgba(0,0,0,.5);
+  }
+  .suggest.open { display: block; }
+  .sug {
+    padding: 10px 14px; cursor: pointer; font-size: .92rem;
+    border-bottom: 1px solid #241c36;
+  }
+  .sug:last-child { border-bottom: none; }
+  .sug small { color: var(--muted); display: block; }
+  .sug:hover, .sug.sel { background: #2c2244; }
+
+  .msg { min-height: 24px; margin-top: 14px; font-size: .95rem; color: var(--muted); text-align: center; }
+  .msg.bad { color: var(--red); }
+  .msg.good { color: var(--green); }
+
+  .shake { animation: shake .35s; }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-8px)} 75%{transform:translateX(8px)} }
+
+  .reveal {
+    display: none; width: 100%; margin-top: 20px;
+    background: var(--panel); border: 1px solid #322747; border-radius: 18px;
+    padding: 20px; text-align: center;
+  }
+  .reveal.open { display: block; animation: pop .3s; }
+  @keyframes pop { from { transform: scale(.92); opacity: 0; } }
+  .reveal img { width: 130px; height: 130px; border-radius: 12px; object-fit: cover; box-shadow: 0 8px 30px rgba(0,0,0,.5); }
+  .reveal .rtitle { font-size: 1.25rem; font-weight: 700; margin: 12px 0 2px; }
+  .reveal .rmeta { color: var(--muted); font-size: .92rem; }
+  .reveal .verdict { font-weight: 800; font-size: .95rem; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 8px; }
+  .reveal .verdict.good { color: var(--green); }
+  .reveal .verdict.bad { color: var(--red); }
+  .reveal .actions { display: flex; gap: 10px; justify-content: center; margin-top: 16px; }
+  .btn.primary { background: var(--gold); color: #14100a; font-weight: 700; border: none; padding: 12px 22px; }
+  .btn.primary:hover { background: #ffc46a; color: #14100a; }
+
+  footer { position: relative; z-index: 1; margin-top: auto; padding-top: 30px; color: #5d5472; font-size: .78rem; text-align: center; }
+  @media (max-width: 480px) {
+    .controls { flex-direction: column; }
+    .btn { padding: 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="spotlight"></div>
+  <div class="wrap">
+    <h1 class="logo">bollyspot</h1>
+    <p class="tagline">name the Bollywood track from a tiny clip 🎬</p>
+
+    <div class="pills era" id="eraPills"></div>
+    <div class="pills diff" id="diffPills"></div>
+
+    <div class="stats">
+      <span>Score <b id="score">0</b></span>
+      <span>Streak <b id="streak">0</b></span>
+      <span>Best <b id="best">0</b></span>
+    </div>
+
+    <div class="playzone">
+      <button class="playbtn pulse" id="playBtn" title="Play snippet">
+        <svg viewBox="0 0 24 24" id="playIcon"><path d="M8 5v14l11-7z"/></svg>
+      </button>
+      <div class="sniplen" id="snipLen">0.1s</div>
+      <div class="attempts" id="attempts"></div>
+    </div>
+
+    <div class="controls" id="controls">
+      <div class="guessbox">
+        <div class="suggest" id="suggest"></div>
+        <input id="guess" type="text" placeholder="Name that track…" autocomplete="off" spellcheck="false">
+      </div>
+      <button class="btn" id="moreBtn" title="Doubles the clip, costs an attempt">+ More time</button>
+      <button class="btn warn" id="skipBtn">Skip ▸</button>
+    </div>
+
+    <div class="msg" id="msg"></div>
+
+    <div class="reveal" id="reveal">
+      <div class="verdict" id="verdict"></div>
+      <img id="rArt" alt="album art">
+      <div class="rtitle" id="rTitle"></div>
+      <div class="rmeta" id="rMeta"></div>
+      <div class="actions">
+        <button class="btn" id="fullBtn">▶ Play preview</button>
+        <button class="btn primary" id="nextBtn">Next song ⟶</button>
+      </div>
+    </div>
+  </div>
+  <footer>Fan-made guessing game · 30-sec previews & artwork courtesy of the iTunes Search API · not affiliated with anyone</footer>
+</div>
+
+<script id="songdata" type="application/json">/*__SONGS__*/</script>
+<script>
+"use strict";
+const SONGS = JSON.parse(document.getElementById('songdata').textContent);
+
+const ERAS = [
+  { id: 'any', label: 'Any era', test: () => true },
+  { id: 'classic', label: 'Classic', test: y => y > 0 && y < 1990 },
+  { id: '90s', label: '90s', test: y => y >= 1990 && y < 2000 },
+  { id: '2000s', label: '2000s', test: y => y >= 2000 && y < 2010 },
+  { id: '2010s', label: '2010s', test: y => y >= 2010 && y < 2020 },
+  { id: '2020s', label: '2020s', test: y => y >= 2020 },
+];
+const DIFFS = [
+  { id: 'easy', label: 'Easy', len: 3.0, pts: 10 },
+  { id: 'medium', label: 'Medium', len: 1.0, pts: 25 },
+  { id: 'hard', label: 'Hard', len: 0.5, pts: 50 },
+  { id: 'expert', label: 'Expert', len: 0.25, pts: 100 },
+  { id: 'imp', label: 'Impossible', len: 0.1, pts: 250 },
+];
+const MAX_TRIES = 5;
+
+let era = ERAS[0], diff = DIFFS[0];
+let current = null, offset = 0, tries = 0, roundOver = false;
+let score = 0, streak = 0, best = 0;
+let played = new Set();
+
+try {
+  const s = JSON.parse(localStorage.getItem('bollyspot') || '{}');
+  score = s.score || 0; streak = s.streak || 0; best = s.best || 0;
+} catch (e) {}
+
+const $ = id => document.getElementById(id);
+const audio = new Audio();
+audio.preload = 'auto';
+let stopTimer = null;
+
+function norm(s) {
+  return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '');
+}
+SONGS.forEach(s => { s.k = norm(s.t); s.search = norm(s.t + ' ' + (s.m || '') + ' ' + s.a); });
+
+function pool() {
+  const p = SONGS.filter(s => era.test(s.y));
+  return p.length ? p : SONGS;
+}
+function snipSecs() { return Math.min(12, diff.len * Math.pow(2, tries)); }
+
+function saveStats() {
+  try { localStorage.setItem('bollyspot', JSON.stringify({ score, streak, best })); } catch (e) {}
+}
+function renderStats() {
+  $('score').textContent = score; $('streak').textContent = streak; $('best').textContent = best;
+}
+function renderPills() {
+  $('eraPills').innerHTML = ERAS.map(e =>
+    `<button class="pill ${e === era ? 'active' : ''}" data-era="${e.id}">${e.label}</button>`).join('');
+  $('diffPills').innerHTML = DIFFS.map(d =>
+    `<button class="pill ${d === diff ? 'active' : ''}" data-diff="${d.id}">${d.label}</button>`).join('');
+}
+function renderRound() {
+  $('snipLen').textContent = (+snipSecs().toFixed(2)) + 's';
+  $('attempts').innerHTML = Array.from({ length: MAX_TRIES }, (_, i) =>
+    `<div class="dot ${i < tries ? 'used' : i === tries ? 'current' : ''}"></div>`).join('');
+}
+
+function newRound() {
+  stopAudio();
+  const p = pool();
+  let candidates = p.filter(s => !played.has(s.p));
+  if (!candidates.length) { played.clear(); candidates = p; }
+  current = candidates[Math.floor(Math.random() * candidates.length)];
+  played.add(current.p);
+  tries = 0; roundOver = false;
+  offset = Math.random() * 18;
+  audio.src = current.p;
+  $('reveal').classList.remove('open');
+  $('controls').style.display = '';
+  $('guess').value = '';
+  $('msg').textContent = 'Hit play, then name that track';
+  $('msg').className = 'msg';
+  $('playBtn').classList.add('pulse');
+  closeSuggest();
+  renderRound();
+}
+
+function stopAudio() {
+  audio.pause();
+  if (stopTimer) { clearTimeout(stopTimer); stopTimer = null; }
+  setPlayingUI(false);
+}
+function setPlayingUI(on) {
+  $('playIcon').innerHTML = on ? '<rect x="6" y="5" width="4" height="14"/><rect x="14" y="5" width="4" height="14"/>' : '<path d="M8 5v14l11-7z"/>';
+  $('playBtn').classList.toggle('playing', on);
+}
+function playSnippet() {
+  stopAudio();
+  $('playBtn').classList.remove('pulse');
+  const len = snipSecs();
+  audio.currentTime = offset;
+  audio.play().then(() => {
+    setPlayingUI(true);
+    stopTimer = setTimeout(() => stopAudio(), len * 1000);
+  }).catch(() => {
+    $('msg').textContent = 'Could not load audio — check your internet, or skip this one';
+    $('msg').className = 'msg bad';
+  });
+}
+function playFull() {
+  stopAudio();
+  audio.currentTime = 0;
+  audio.play().then(() => setPlayingUI(true)).catch(() => {});
+  audio.onended = () => setPlayingUI(false);
+}
+
+function useTry(reason) {
+  tries++;
+  if (tries >= MAX_TRIES) { endRound(false); return; }
+  renderRound();
+  $('msg').textContent = reason + ' — clip is now ' + $('snipLen').textContent;
+  $('msg').className = 'msg bad';
+  $('controls').classList.add('shake');
+  setTimeout(() => $('controls').classList.remove('shake'), 400);
+}
+
+function submitGuess(song) {
+  if (roundOver || !current) return;
+  const ok = song ? song.k === current.k : norm($('guess').value) === current.k;
+  if (ok) { endRound(true); }
+  else {
+    $('guess').value = '';
+    closeSuggest();
+    useTry('Nope');
+  }
+}
+
+function endRound(won) {
+  roundOver = true;
+  stopAudio();
+  closeSuggest();
+  let gained = 0;
+  if (won) {
+    gained = Math.max(5, Math.round(diff.pts * (1 - tries * 0.15)));
+    score += gained; streak++;
+    if (streak > best) best = streak;
+  } else { streak = 0; }
+  saveStats(); renderStats();
+  $('controls').style.display = 'none';
+  $('msg').textContent = '';
+  $('verdict').textContent = won ? `Correct! +${gained} pts` : 'It was…';
+  $('verdict').className = 'verdict ' + (won ? 'good' : 'bad');
+  $('rArt').src = current.art || '';
+  $('rTitle').textContent = current.t;
+  $('rMeta').textContent = (current.m ? current.m + ' · ' : '') + current.a + (current.y ? ' · ' + current.y : '');
+  $('reveal').classList.add('open');
+}
+
+/* ---- autocomplete ---- */
+let sel = -1, sugItems = [];
+function closeSuggest() { $('suggest').classList.remove('open'); sel = -1; sugItems = []; }
+function updateSuggest() {
+  const q = norm($('guess').value);
+  if (q.length < 2) { closeSuggest(); return; }
+  sugItems = SONGS.filter(s => s.search.includes(q)).slice(0, 8);
+  if (!sugItems.length) { closeSuggest(); return; }
+  $('suggest').innerHTML = sugItems.map((s, i) =>
+    `<div class="sug" data-i="${i}">${s.t}<small>${s.m ? s.m + ' · ' : ''}${s.a}</small></div>`).join('');
+  $('suggest').classList.add('open');
+  sel = -1;
+}
+
+/* ---- events ---- */
+$('playBtn').onclick = () => { if (!roundOver) playSnippet(); };
+$('moreBtn').onclick = () => { if (!roundOver) useTry('Hint used'); };
+$('skipBtn').onclick = () => { if (!roundOver) endRound(false); };
+$('nextBtn').onclick = newRound;
+$('fullBtn').onclick = playFull;
+$('guess').oninput = updateSuggest;
+$('guess').onkeydown = e => {
+  const open = $('suggest').classList.contains('open');
+  if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+    if (!open) return;
+    e.preventDefault();
+    sel = e.key === 'ArrowDown' ? Math.min(sel + 1, sugItems.length - 1) : Math.max(sel - 1, 0);
+    document.querySelectorAll('.sug').forEach((el, i) => el.classList.toggle('sel', i === sel));
+  } else if (e.key === 'Enter') {
+    if (open && sel >= 0) { submitGuess(sugItems[sel]); }
+    else if (open && sugItems.length === 1) { submitGuess(sugItems[0]); }
+    else { submitGuess(null); }
+  } else if (e.key === 'Escape') { closeSuggest(); }
+};
+$('suggest').onmousedown = e => {
+  const el = e.target.closest('.sug');
+  if (el) { e.preventDefault(); submitGuess(sugItems[+el.dataset.i]); }
+};
+document.addEventListener('click', e => {
+  if (!e.target.closest('.guessbox')) closeSuggest();
+});
+$('eraPills').onclick = e => {
+  const b = e.target.closest('[data-era]');
+  if (!b) return;
+  era = ERAS.find(x => x.id === b.dataset.era);
+  renderPills(); newRound();
+};
+$('diffPills').onclick = e => {
+  const b = e.target.closest('[data-diff]');
+  if (!b) return;
+  diff = DIFFS.find(x => x.id === b.dataset.diff);
+  renderPills();
+  if (!roundOver) { tries = Math.min(tries, MAX_TRIES - 1); renderRound(); }
+};
+document.addEventListener('keydown', e => {
+  if (e.key === ' ' && document.activeElement !== $('guess')) {
+    e.preventDefault();
+    if (!roundOver) playSnippet();
+  }
+});
+
+renderPills(); renderStats(); newRound();
+</script>
+</body>
+</html>

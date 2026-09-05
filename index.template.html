@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>BollySpot — guess the Bollywood song</title>
+<title>BollySpot — guess the song</title>
 <style>
   :root {
     --bg: #0b0810;
@@ -11,13 +11,18 @@
     --panel2: #1f1830;
     --text: #f3edff;
     --muted: #9a8fb0;
-    --gold: #ffb340;
-    --gold-dim: #b97f2a;
-    --pink: #ff4da6;
+    --a1: #ffb340;
+    --a2: #ff4da6;
+    --a1-rgb: 255,179,64;
+    --a2-rgb: 255,77,166;
     --green: #3ddc84;
     --red: #ff5470;
     --pill: #241c36;
+    --line: #322747;
   }
+  body[data-spot="green"] { --a1: #3ddc84; --a2: #1db954; --a1-rgb: 61,220,132; --a2-rgb: 29,185,84; }
+  body[data-spot="blue"]  { --a1: #4dc3ff; --a2: #7a5cff; --a1-rgb: 77,195,255; --a2-rgb: 122,92,255; }
+  body[data-spot="pink"]  { --a1: #ff4da6; --a2: #ff8a5c; --a1-rgb: 255,77,166; --a2-rgb: 255,138,92; }
   * { box-sizing: border-box; }
   html, body { height: 100%; }
   body {
@@ -27,110 +32,116 @@
     color: var(--text);
     overflow-x: hidden;
   }
-  .stage {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 24px 16px 60px;
-    position: relative;
-  }
+  .stage { min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 24px 16px 60px; position: relative; }
   .spotlight {
     position: fixed; inset: 0; pointer-events: none; z-index: 0;
     background:
-      radial-gradient(ellipse 60% 45% at 50% 30%, rgba(255,179,64,.16), transparent 65%),
-      radial-gradient(ellipse 45% 35% at 50% 38%, rgba(255,77,166,.10), transparent 70%);
+      radial-gradient(ellipse 60% 45% at 50% 30%, rgba(var(--a1-rgb), .16), transparent 65%),
+      radial-gradient(ellipse 45% 35% at 50% 38%, rgba(var(--a2-rgb), .10), transparent 70%);
   }
-  .wrap { position: relative; z-index: 1; width: 100%; max-width: 560px; display: flex; flex-direction: column; align-items: center; }
+  .wrap { position: relative; z-index: 1; width: 100%; max-width: 580px; display: flex; flex-direction: column; align-items: center; }
   h1.logo {
-    font-size: clamp(2.2rem, 7vw, 3.4rem);
-    margin: 6px 0 2px;
-    letter-spacing: -.02em;
-    background: linear-gradient(100deg, var(--gold), var(--pink));
-    -webkit-background-clip: text; background-clip: text; color: transparent;
-    font-weight: 800;
+    font-size: clamp(2.2rem, 7vw, 3.2rem); margin: 6px 0 2px; letter-spacing: -.02em;
+    background: linear-gradient(100deg, var(--a1), var(--a2));
+    -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 800;
   }
-  .tagline { color: var(--muted); margin: 0 0 22px; font-size: .95rem; }
+  .tagline { color: var(--muted); margin: 0 0 18px; font-size: .95rem; }
 
-  .pills { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 12px; }
+  .pills { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 10px; }
   .pill {
-    background: var(--pill); color: var(--muted); border: 1px solid #322747;
-    padding: 7px 14px; border-radius: 999px; cursor: pointer; font-size: .85rem;
-    transition: all .15s;
+    background: var(--pill); color: var(--muted); border: 1px solid var(--line);
+    padding: 7px 14px; border-radius: 999px; cursor: pointer; font-size: .85rem; transition: all .15s;
   }
   .pill:hover { color: var(--text); border-color: #4a3a68; }
   .pill.active { color: #14100a; font-weight: 700; border-color: transparent; }
-  .pills.era .pill.active { background: var(--gold); }
-  .pills.diff .pill.active { background: var(--pink); color: #fff; }
+  .pills.cat .pill.active { background: linear-gradient(100deg, var(--a1), var(--a2)); color: #fff; }
+  .pills.lang .pill.active { background: var(--text); }
+  .pills.era .pill.active { background: var(--a1); }
+  .pills.diff .pill.active { background: var(--a2); color: #fff; }
 
-  .stats { display: flex; gap: 22px; color: var(--muted); font-size: .85rem; margin: 8px 0 4px; }
-  .stats b { color: var(--gold); font-size: 1.05rem; }
+  .stats { display: flex; gap: 22px; color: var(--muted); font-size: .85rem; margin: 6px 0 0; }
+  .stats b { color: var(--a1); font-size: 1.05rem; }
 
-  .playzone { margin: 26px 0 10px; display: flex; flex-direction: column; align-items: center; }
+  .playzone { margin: 20px 0 6px; display: flex; flex-direction: column; align-items: center; width: 100%; }
+  .playrow { display: flex; align-items: center; gap: 22px; }
   .playbtn {
-    width: 128px; height: 128px; border-radius: 50%;
-    background: radial-gradient(circle at 35% 30%, #ffd28a, var(--gold) 55%, #d88f1f);
-    border: none; cursor: pointer;
-    display: grid; place-items: center;
-    box-shadow: 0 0 60px rgba(255,179,64,.35), 0 0 120px rgba(255,77,166,.15);
+    width: 120px; height: 120px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.55), var(--a1) 55%, var(--a2));
+    border: none; cursor: pointer; display: grid; place-items: center;
+    box-shadow: 0 0 60px rgba(var(--a1-rgb), .35), 0 0 120px rgba(var(--a2-rgb), .15);
     transition: transform .12s;
   }
   .playbtn:hover { transform: scale(1.05); }
   .playbtn:active { transform: scale(.97); }
-  .playbtn svg { width: 46px; height: 46px; fill: #14100a; margin-left: 6px; }
+  .playbtn svg { width: 44px; height: 44px; fill: #14100a; margin-left: 6px; }
   .playbtn.playing svg { margin-left: 0; }
   .playbtn.pulse { animation: pulse 1.4s ease-out infinite; }
   @keyframes pulse {
-    0% { box-shadow: 0 0 60px rgba(255,179,64,.35), 0 0 0 0 rgba(255,179,64,.45); }
-    100% { box-shadow: 0 0 60px rgba(255,179,64,.35), 0 0 0 42px rgba(255,179,64,0); }
+    0% { box-shadow: 0 0 60px rgba(var(--a1-rgb), .35), 0 0 0 0 rgba(var(--a1-rgb), .45); }
+    100% { box-shadow: 0 0 60px rgba(var(--a1-rgb), .35), 0 0 0 42px rgba(var(--a1-rgb), 0); }
   }
-  .sniplen { margin-top: 14px; font-family: Consolas, monospace; font-size: 1.15rem; color: var(--gold); }
-  .attempts { display: flex; gap: 8px; margin-top: 10px; }
-  .dot { width: 10px; height: 10px; border-radius: 50%; background: #322747; }
+  .sniplen { font-family: Consolas, monospace; font-size: 1.3rem; color: var(--a1); min-width: 70px; text-align: left; }
+
+  .timeline { width: 100%; max-width: 420px; margin-top: 18px; position: relative; height: 26px; }
+  .tl-bar { position: absolute; top: 9px; left: 0; right: 0; height: 8px; border-radius: 4px; background: var(--pill); overflow: hidden; }
+  .tl-fill { height: 100%; width: 0%; border-radius: 4px; background: linear-gradient(90deg, var(--a1), var(--a2)); transition: width .25s; }
+  .tl-cursor { position: absolute; top: 6px; width: 2px; height: 14px; background: #fff; opacity: 0; transition: opacity .2s; }
+  .tl-tick { position: absolute; top: 9px; width: 2px; height: 8px; background: #4a3a68; }
+  .tl-label { position: absolute; top: -8px; font-size: .68rem; color: var(--muted); transform: translateX(-50%); }
+
+  .attempts { display: flex; gap: 8px; margin-top: 12px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--line); }
   .dot.used { background: var(--red); }
-  .dot.current { background: var(--gold); }
+  .dot.current { background: var(--a1); }
 
   .controls { display: flex; gap: 10px; width: 100%; margin-top: 18px; }
   .guessbox { position: relative; flex: 1; }
   .guessbox input {
-    width: 100%; padding: 13px 16px; border-radius: 12px;
-    background: var(--panel); color: var(--text);
-    border: 1px solid #322747; font-size: 1rem; outline: none;
+    width: 100%; padding: 13px 16px; border-radius: 12px; background: var(--panel);
+    color: var(--text); border: 1px solid var(--line); font-size: 1rem; outline: none;
   }
-  .guessbox input:focus { border-color: var(--gold-dim); }
+  .guessbox input:focus { border-color: var(--a1); }
   .btn {
-    background: var(--panel); color: var(--muted); border: 1px solid #322747;
-    border-radius: 12px; padding: 0 18px; cursor: pointer; font-size: .95rem;
+    background: var(--panel); color: var(--muted); border: 1px solid var(--line);
+    border-radius: 12px; padding: 0 16px; cursor: pointer; font-size: .92rem;
     transition: all .15s; white-space: nowrap;
   }
   .btn:hover { color: var(--text); border-color: #4a3a68; }
   .btn.warn:hover { color: var(--red); border-color: var(--red); }
   .suggest {
     position: absolute; left: 0; right: 0; bottom: calc(100% + 6px);
-    background: var(--panel2); border: 1px solid #322747; border-radius: 12px;
+    background: var(--panel2); border: 1px solid var(--line); border-radius: 12px;
     max-height: 260px; overflow-y: auto; display: none; z-index: 5;
     box-shadow: 0 -8px 30px rgba(0,0,0,.5);
   }
   .suggest.open { display: block; }
-  .sug {
-    padding: 10px 14px; cursor: pointer; font-size: .92rem;
-    border-bottom: 1px solid #241c36;
-  }
+  .sug { padding: 10px 14px; cursor: pointer; font-size: .92rem; border-bottom: 1px solid var(--pill); }
   .sug:last-child { border-bottom: none; }
   .sug small { color: var(--muted); display: block; }
   .sug:hover, .sug.sel { background: #2c2244; }
 
   .msg { min-height: 24px; margin-top: 14px; font-size: .95rem; color: var(--muted); text-align: center; }
-  .msg.bad { color: var(--red); }
-  .msg.good { color: var(--green); }
 
   .shake { animation: shake .35s; }
   @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-8px)} 75%{transform:translateX(8px)} }
 
+  /* toasts */
+  .toasts { position: fixed; top: 18px; left: 50%; transform: translateX(-50%); z-index: 50; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; }
+  .toast {
+    padding: 12px 22px; border-radius: 14px; font-weight: 700; font-size: 1rem;
+    background: var(--panel2); border: 1px solid var(--line); color: var(--text);
+    box-shadow: 0 10px 40px rgba(0,0,0,.6); animation: toastin .25s cubic-bezier(.2,1.4,.4,1);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .toast.out { animation: toastout .3s forwards; }
+  .toast.good { border-color: var(--green); color: var(--green); background: #10271c; }
+  .toast.bad { border-color: var(--red); color: var(--red); background: #2b131c; }
+  @keyframes toastin { from { transform: translateY(-30px) scale(.85); opacity: 0; } }
+  @keyframes toastout { to { transform: translateY(-20px); opacity: 0; } }
+
   .reveal {
-    display: none; width: 100%; margin-top: 20px;
-    background: var(--panel); border: 1px solid #322747; border-radius: 18px;
-    padding: 20px; text-align: center;
+    display: none; width: 100%; margin-top: 20px; background: var(--panel);
+    border: 1px solid var(--line); border-radius: 18px; padding: 20px; text-align: center;
   }
   .reveal.open { display: block; animation: pop .3s; }
   @keyframes pop { from { transform: scale(.92); opacity: 0; } }
@@ -141,23 +152,75 @@
   .reveal .verdict.good { color: var(--green); }
   .reveal .verdict.bad { color: var(--red); }
   .reveal .actions { display: flex; gap: 10px; justify-content: center; margin-top: 16px; }
-  .btn.primary { background: var(--gold); color: #14100a; font-weight: 700; border: none; padding: 12px 22px; }
-  .btn.primary:hover { background: #ffc46a; color: #14100a; }
+  .btn.primary { background: linear-gradient(100deg, var(--a1), var(--a2)); color: #fff; font-weight: 700; border: none; padding: 12px 22px; }
+  .btn.primary:hover { filter: brightness(1.15); color: #fff; }
+
+  /* menu */
+  .menubtn {
+    position: fixed; top: 16px; left: 16px; z-index: 40;
+    width: 42px; height: 42px; border-radius: 12px; background: var(--panel);
+    border: 1px solid var(--line); color: var(--text); cursor: pointer; font-size: 1.2rem;
+  }
+  .drawer {
+    position: fixed; top: 0; left: 0; bottom: 0; width: 290px; z-index: 45;
+    background: var(--panel2); border-right: 1px solid var(--line);
+    transform: translateX(-100%); transition: transform .25s; padding: 20px;
+    overflow-y: auto;
+  }
+  .drawer.open { transform: translateX(0); }
+  .drawer h3 { margin: 18px 0 10px; font-size: .8rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+  .drawer h3:first-of-type { margin-top: 8px; }
+  .swatches { display: flex; gap: 10px; }
+  .swatch { width: 34px; height: 34px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; }
+  .swatch.active { border-color: #fff; }
+  .sw-gold { background: linear-gradient(120deg, #ffb340, #ff4da6); }
+  .sw-green { background: linear-gradient(120deg, #3ddc84, #1db954); }
+  .sw-blue { background: linear-gradient(120deg, #4dc3ff, #7a5cff); }
+  .sw-pink { background: linear-gradient(120deg, #ff4da6, #ff8a5c); }
+  .drawer label.row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; font-size: .92rem; color: var(--text); cursor: pointer; }
+  .drawer input[type="range"] { width: 130px; accent-color: var(--a1); }
+  .drawer input[type="checkbox"] { accent-color: var(--a1); width: 18px; height: 18px; }
+  .drawer .btn { width: 100%; padding: 10px; margin-top: 6px; }
+  .scrim { position: fixed; inset: 0; z-index: 44; background: rgba(0,0,0,.5); display: none; }
+  .scrim.open { display: block; }
+  .drawer .count { color: var(--muted); font-size: .8rem; margin-top: 14px; }
 
   footer { position: relative; z-index: 1; margin-top: auto; padding-top: 30px; color: #5d5472; font-size: .78rem; text-align: center; }
-  @media (max-width: 480px) {
+  @media (max-width: 500px) {
     .controls { flex-direction: column; }
     .btn { padding: 12px; }
+    .playrow { gap: 14px; }
   }
 </style>
 </head>
-<body>
+<body data-spot="gold">
+<button class="menubtn" id="menuBtn" title="Options">☰</button>
+<div class="scrim" id="scrim"></div>
+<div class="drawer" id="drawer">
+  <h3>Spotlight</h3>
+  <div class="swatches" id="swatches">
+    <div class="swatch sw-gold active" data-spot="gold" title="Gold"></div>
+    <div class="swatch sw-green" data-spot="green" title="Green"></div>
+    <div class="swatch sw-blue" data-spot="blue" title="Blue"></div>
+    <div class="swatch sw-pink" data-spot="pink" title="Pink"></div>
+  </div>
+  <h3>Gameplay</h3>
+  <label class="row">From the start <input type="checkbox" id="fromStart"></label>
+  <label class="row">Volume <input type="range" id="volume" min="0" max="100" value="90"></label>
+  <h3>Danger zone</h3>
+  <button class="btn warn" id="resetStats">Reset score &amp; stats</button>
+  <div class="count" id="catalogCount"></div>
+</div>
+
 <div class="stage">
   <div class="spotlight"></div>
+  <div class="toasts" id="toasts"></div>
   <div class="wrap">
     <h1 class="logo">bollyspot</h1>
-    <p class="tagline">name the Bollywood track from a tiny clip 🎬</p>
+    <p class="tagline">name that track from a tiny clip 🎬</p>
 
+    <div class="pills cat" id="catPills"></div>
+    <div class="pills lang" id="langPills"></div>
     <div class="pills era" id="eraPills"></div>
     <div class="pills diff" id="diffPills"></div>
 
@@ -168,10 +231,16 @@
     </div>
 
     <div class="playzone">
-      <button class="playbtn pulse" id="playBtn" title="Play snippet">
-        <svg viewBox="0 0 24 24" id="playIcon"><path d="M8 5v14l11-7z"/></svg>
-      </button>
-      <div class="sniplen" id="snipLen">0.1s</div>
+      <div class="playrow">
+        <button class="playbtn pulse" id="playBtn" title="Play snippet (Space)">
+          <svg viewBox="0 0 24 24" id="playIcon"><path d="M8 5v14l11-7z"/></svg>
+        </button>
+        <div class="sniplen" id="snipLen">0.1s</div>
+      </div>
+      <div class="timeline" id="timeline">
+        <div class="tl-bar"><div class="tl-fill" id="tlFill"></div></div>
+        <div class="tl-cursor" id="tlCursor"></div>
+      </div>
       <div class="attempts" id="attempts"></div>
     </div>
 
@@ -180,8 +249,8 @@
         <div class="suggest" id="suggest"></div>
         <input id="guess" type="text" placeholder="Name that track…" autocomplete="off" spellcheck="false">
       </div>
-      <button class="btn" id="moreBtn" title="Doubles the clip, costs an attempt">+ More time</button>
-      <button class="btn warn" id="skipBtn">Skip ▸</button>
+      <button class="btn" id="moreBtn" title="Doubles the clip, costs an attempt">+ Time</button>
+      <button class="btn warn" id="skipBtn">Give up ▸</button>
     </div>
 
     <div class="msg" id="msg"></div>
@@ -197,7 +266,7 @@
       </div>
     </div>
   </div>
-  <footer>Fan-made guessing game · 30-sec previews & artwork courtesy of the iTunes Search API · not affiliated with anyone</footer>
+  <footer>Fan-made guessing game · 30-sec previews &amp; artwork courtesy of the iTunes Search API · not affiliated with anyone</footer>
 </div>
 
 <script id="songdata" type="application/json">/*__SONGS__*/</script>
@@ -205,6 +274,16 @@
 "use strict";
 const SONGS = JSON.parse(document.getElementById('songdata').textContent);
 
+const CATS = [
+  { id: 'both', label: 'All songs', test: () => true },
+  { id: 'b', label: '🎬 Bollywood', test: s => s.c === 'b' },
+  { id: 'h', label: '🎸 Hollywood', test: s => s.c === 'h' },
+];
+const LANGS = [
+  { id: 'any', label: 'Any language', test: () => true },
+  { id: 'hi', label: 'हिंदी Hindi', test: s => s.l === 'hi' },
+  { id: 'en', label: 'English', test: s => s.l === 'en' },
+];
 const ERAS = [
   { id: 'any', label: 'Any era', test: () => true },
   { id: 'classic', label: 'Classic', test: y => y > 0 && y < 1990 },
@@ -221,21 +300,24 @@ const DIFFS = [
   { id: 'imp', label: 'Impossible', len: 0.1, pts: 250 },
 ];
 const MAX_TRIES = 5;
+const PREVIEW = 30;
 
-let era = ERAS[0], diff = DIFFS[0];
+let cat = CATS[0], lang = LANGS[0], era = ERAS[0], diff = DIFFS[0];
 let current = null, offset = 0, tries = 0, roundOver = false;
 let score = 0, streak = 0, best = 0;
 let played = new Set();
+let prefs = { spot: 'gold', fromStart: false, volume: 90 };
 
 try {
   const s = JSON.parse(localStorage.getItem('bollyspot') || '{}');
   score = s.score || 0; streak = s.streak || 0; best = s.best || 0;
+  if (s.prefs) prefs = Object.assign(prefs, s.prefs);
 } catch (e) {}
 
 const $ = id => document.getElementById(id);
 const audio = new Audio();
 audio.preload = 'auto';
-let stopTimer = null;
+let stopTimer = null, cursorTimer = null;
 
 function norm(s) {
   return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '');
@@ -243,27 +325,59 @@ function norm(s) {
 SONGS.forEach(s => { s.k = norm(s.t); s.search = norm(s.t + ' ' + (s.m || '') + ' ' + s.a); });
 
 function pool() {
-  const p = SONGS.filter(s => era.test(s.y));
+  const p = SONGS.filter(s => cat.test(s) && lang.test(s) && era.test(s.y));
   return p.length ? p : SONGS;
 }
 function snipSecs() { return Math.min(12, diff.len * Math.pow(2, tries)); }
+function fmt(v) { return (+v.toFixed(2)) + 's'; }
 
-function saveStats() {
-  try { localStorage.setItem('bollyspot', JSON.stringify({ score, streak, best })); } catch (e) {}
+function save() {
+  try { localStorage.setItem('bollyspot', JSON.stringify({ score, streak, best, prefs })); } catch (e) {}
 }
 function renderStats() {
   $('score').textContent = score; $('streak').textContent = streak; $('best').textContent = best;
 }
+function pillRow(elId, items, active, key) {
+  $(elId).innerHTML = items.map(x =>
+    `<button class="pill ${x === active ? 'active' : ''}" data-${key}="${x.id}">${x.label}</button>`).join('');
+}
 function renderPills() {
-  $('eraPills').innerHTML = ERAS.map(e =>
-    `<button class="pill ${e === era ? 'active' : ''}" data-era="${e.id}">${e.label}</button>`).join('');
-  $('diffPills').innerHTML = DIFFS.map(d =>
-    `<button class="pill ${d === diff ? 'active' : ''}" data-diff="${d.id}">${d.label}</button>`).join('');
+  pillRow('catPills', CATS, cat, 'cat');
+  pillRow('langPills', LANGS, lang, 'lang');
+  pillRow('eraPills', ERAS, era, 'era');
+  pillRow('diffPills', DIFFS, diff, 'diff');
+}
+function renderTimeline() {
+  const len = snipSecs();
+  $('tlFill').style.width = (len / PREVIEW * 100) + '%';
+  const tl = $('timeline');
+  tl.querySelectorAll('.tl-tick, .tl-label').forEach(el => el.remove());
+  for (let i = tries + 1; i < MAX_TRIES; i++) {
+    const l = Math.min(12, diff.len * Math.pow(2, i));
+    const x = l / PREVIEW * 100;
+    const tick = document.createElement('div');
+    tick.className = 'tl-tick'; tick.style.left = x + '%';
+    tl.appendChild(tick);
+  }
+  const lab = document.createElement('div');
+  lab.className = 'tl-label'; lab.style.left = Math.min(96, len / PREVIEW * 100) + '%';
+  lab.textContent = fmt(len);
+  tl.appendChild(lab);
 }
 function renderRound() {
-  $('snipLen').textContent = (+snipSecs().toFixed(2)) + 's';
+  $('snipLen').textContent = fmt(snipSecs());
   $('attempts').innerHTML = Array.from({ length: MAX_TRIES }, (_, i) =>
     `<div class="dot ${i < tries ? 'used' : i === tries ? 'current' : ''}"></div>`).join('');
+  renderTimeline();
+}
+
+function toast(text, kind) {
+  const t = document.createElement('div');
+  t.className = 'toast ' + (kind || '');
+  t.textContent = text;
+  $('toasts').appendChild(t);
+  setTimeout(() => t.classList.add('out'), 1900);
+  setTimeout(() => t.remove(), 2250);
 }
 
 function newRound() {
@@ -274,13 +388,12 @@ function newRound() {
   current = candidates[Math.floor(Math.random() * candidates.length)];
   played.add(current.p);
   tries = 0; roundOver = false;
-  offset = Math.random() * 18;
+  offset = prefs.fromStart ? 0 : Math.random() * (PREVIEW - 13);
   audio.src = current.p;
   $('reveal').classList.remove('open');
   $('controls').style.display = '';
   $('guess').value = '';
   $('msg').textContent = 'Hit play, then name that track';
-  $('msg').className = 'msg';
   $('playBtn').classList.add('pulse');
   closeSuggest();
   renderRound();
@@ -289,6 +402,8 @@ function newRound() {
 function stopAudio() {
   audio.pause();
   if (stopTimer) { clearTimeout(stopTimer); stopTimer = null; }
+  if (cursorTimer) { clearInterval(cursorTimer); cursorTimer = null; }
+  $('tlCursor').style.opacity = 0;
   setPlayingUI(false);
 }
 function setPlayingUI(on) {
@@ -300,39 +415,45 @@ function playSnippet() {
   $('playBtn').classList.remove('pulse');
   const len = snipSecs();
   audio.currentTime = offset;
+  audio.volume = prefs.volume / 100;
   audio.play().then(() => {
     setPlayingUI(true);
+    const t0 = performance.now();
+    $('tlCursor').style.opacity = 1;
+    cursorTimer = setInterval(() => {
+      const el = Math.min(len, (performance.now() - t0) / 1000);
+      $('tlCursor').style.left = (el / PREVIEW * 100) + '%';
+    }, 40);
     stopTimer = setTimeout(() => stopAudio(), len * 1000);
   }).catch(() => {
-    $('msg').textContent = 'Could not load audio — check your internet, or skip this one';
-    $('msg').className = 'msg bad';
+    toast('Could not load audio — check internet', 'bad');
   });
 }
 function playFull() {
   stopAudio();
   audio.currentTime = 0;
+  audio.volume = prefs.volume / 100;
   audio.play().then(() => setPlayingUI(true)).catch(() => {});
   audio.onended = () => setPlayingUI(false);
 }
 
-function useTry(reason) {
+function useTry(reason, kind) {
   tries++;
   if (tries >= MAX_TRIES) { endRound(false); return; }
   renderRound();
-  $('msg').textContent = reason + ' — clip is now ' + $('snipLen').textContent;
-  $('msg').className = 'msg bad';
+  toast(reason + ' — clip is now ' + fmt(snipSecs()), kind);
   $('controls').classList.add('shake');
   setTimeout(() => $('controls').classList.remove('shake'), 400);
 }
 
 function submitGuess(song) {
   if (roundOver || !current) return;
-  const ok = song ? song.k === current.k : norm($('guess').value) === current.k;
+  const ok = song ? (song.k === current.k && song.c === current.c) : norm($('guess').value) === current.k;
   if (ok) { endRound(true); }
   else {
     $('guess').value = '';
     closeSuggest();
-    useTry('Nope');
+    useTry('❌ Wrong', 'bad');
   }
 }
 
@@ -345,8 +466,12 @@ function endRound(won) {
     gained = Math.max(5, Math.round(diff.pts * (1 - tries * 0.15)));
     score += gained; streak++;
     if (streak > best) best = streak;
-  } else { streak = 0; }
-  saveStats(); renderStats();
+    toast(`✅ Correct! +${gained} pts`, 'good');
+  } else {
+    streak = 0;
+    toast('❌ Out of luck — it was “' + current.t + '”', 'bad');
+  }
+  save(); renderStats();
   $('controls').style.display = 'none';
   $('msg').textContent = '';
   $('verdict').textContent = won ? `Correct! +${gained} pts` : 'It was…';
@@ -363,7 +488,8 @@ function closeSuggest() { $('suggest').classList.remove('open'); sel = -1; sugIt
 function updateSuggest() {
   const q = norm($('guess').value);
   if (q.length < 2) { closeSuggest(); return; }
-  sugItems = SONGS.filter(s => s.search.includes(q)).slice(0, 8);
+  const inScope = SONGS.filter(s => cat.test(s) && lang.test(s));
+  sugItems = inScope.filter(s => s.search.includes(q)).slice(0, 8);
   if (!sugItems.length) { closeSuggest(); return; }
   $('suggest').innerHTML = sugItems.map((s, i) =>
     `<div class="sug" data-i="${i}">${s.t}<small>${s.m ? s.m + ' · ' : ''}${s.a}</small></div>`).join('');
@@ -371,9 +497,34 @@ function updateSuggest() {
   sel = -1;
 }
 
+/* ---- prefs / menu ---- */
+function applyPrefs() {
+  document.body.dataset.spot = prefs.spot;
+  document.querySelectorAll('.swatch').forEach(el =>
+    el.classList.toggle('active', el.dataset.spot === prefs.spot));
+  $('fromStart').checked = prefs.fromStart;
+  $('volume').value = prefs.volume;
+}
+$('menuBtn').onclick = () => { $('drawer').classList.toggle('open'); $('scrim').classList.toggle('open', $('drawer').classList.contains('open')); };
+$('scrim').onclick = () => { $('drawer').classList.remove('open'); $('scrim').classList.remove('open'); };
+$('swatches').onclick = e => {
+  const sw = e.target.closest('.swatch');
+  if (!sw) return;
+  prefs.spot = sw.dataset.spot; applyPrefs(); save();
+};
+$('fromStart').onchange = e => {
+  prefs.fromStart = e.target.checked; save();
+  if (!roundOver) offset = prefs.fromStart ? 0 : Math.random() * (PREVIEW - 13);
+};
+$('volume').oninput = e => { prefs.volume = +e.target.value; audio.volume = prefs.volume / 100; save(); };
+$('resetStats').onclick = () => {
+  score = 0; streak = 0; best = 0; save(); renderStats();
+  toast('Stats reset', '');
+};
+
 /* ---- events ---- */
 $('playBtn').onclick = () => { if (!roundOver) playSnippet(); };
-$('moreBtn').onclick = () => { if (!roundOver) useTry('Hint used'); };
+$('moreBtn').onclick = () => { if (!roundOver) useTry('⏩ Hint', ''); };
 $('skipBtn').onclick = () => { if (!roundOver) endRound(false); };
 $('nextBtn').onclick = newRound;
 $('fullBtn').onclick = playFull;
@@ -398,19 +549,26 @@ $('suggest').onmousedown = e => {
 document.addEventListener('click', e => {
   if (!e.target.closest('.guessbox')) closeSuggest();
 });
-$('eraPills').onclick = e => {
-  const b = e.target.closest('[data-era]');
-  if (!b) return;
-  era = ERAS.find(x => x.id === b.dataset.era);
-  renderPills(); newRound();
-};
-$('diffPills').onclick = e => {
-  const b = e.target.closest('[data-diff]');
-  if (!b) return;
-  diff = DIFFS.find(x => x.id === b.dataset.diff);
-  renderPills();
-  if (!roundOver) { tries = Math.min(tries, MAX_TRIES - 1); renderRound(); }
-};
+function pillHandler(elId, key, items, assign) {
+  $(elId).onclick = e => {
+    const b = e.target.closest(`[data-${key}]`);
+    if (!b) return;
+    assign(items.find(x => x.id === b.dataset[key]));
+    renderPills();
+    if (key === 'diff') { if (!roundOver) { tries = Math.min(tries, MAX_TRIES - 1); renderRound(); } }
+    else newRound();
+  };
+}
+pillHandler('catPills', 'cat', CATS, v => {
+  cat = v;
+  if (!SONGS.some(s => cat.test(s) && lang.test(s))) { lang = LANGS[0]; toast('Language reset to Any', ''); }
+});
+pillHandler('langPills', 'lang', LANGS, v => {
+  lang = v;
+  if (!SONGS.some(s => cat.test(s) && lang.test(s))) { cat = CATS[0]; toast('Showing all catalogs', ''); }
+});
+pillHandler('eraPills', 'era', ERAS, v => era = v);
+pillHandler('diffPills', 'diff', DIFFS, v => diff = v);
 document.addEventListener('keydown', e => {
   if (e.key === ' ' && document.activeElement !== $('guess')) {
     e.preventDefault();
@@ -418,7 +576,9 @@ document.addEventListener('keydown', e => {
   }
 });
 
-renderPills(); renderStats(); newRound();
+const nb = SONGS.filter(s => s.c === 'b').length, nh = SONGS.length - nb;
+$('catalogCount').textContent = `${SONGS.length} songs · ${nb} Bollywood · ${nh} Hollywood`;
+applyPrefs(); renderPills(); renderStats(); newRound();
 </script>
 </body>
 </html>

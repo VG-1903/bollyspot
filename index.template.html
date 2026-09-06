@@ -60,6 +60,11 @@
   .pills.era .pill.active { background: var(--a1); }
   .pills.diff .pill.active { background: var(--a2); color: #fff; }
   .pills.tries .pill.active { background: var(--a1); }
+  .pills.mode .pill.active { background: linear-gradient(100deg, var(--red), var(--a2)); color: #fff; }
+  .lbrow { display: flex; justify-content: space-between; gap: 10px; padding: 8px 4px; border-bottom: 1px solid var(--pill); font-size: .92rem; }
+  .lbrow b { color: var(--a1); }
+  .lbrow .who { color: var(--text); }
+  .lbrow small { color: var(--muted); }
   .rowlabel { font-size: .68rem; letter-spacing: .12em; text-transform: uppercase; color: #6d6384; margin: 2px 0 4px; }
 
   .chipbar { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 8px; }
@@ -240,6 +245,12 @@
 <div class="drawer" id="drawer">
   <h3>Teams (pass &amp; play)</h3>
   <div class="minipills" id="teamPills"></div>
+  <h3>Rounds per team</h3>
+  <div class="minipills" id="roundPills"></div>
+  <h3>Guess timer</h3>
+  <div class="minipills" id="timerPills"></div>
+  <h3>Leaderboard</h3>
+  <button class="btn" id="lbBtn">🏆 View leaderboard</button>
   <h3>My songs (Spotify / any list)</h3>
   <button class="btn" id="importBtn">📥 Import my songs</button>
   <button class="btn warn" id="clearMyBtn">Clear imported songs</button>
@@ -275,7 +286,8 @@
     <div class="pills mood" id="moodPills"></div>
     <div class="pills era" id="eraPills"></div>
     <div class="pills fame" id="famePills"></div>
-    <div class="rowlabel">Hardness → clip time</div>
+    <div class="pills mode" id="modePills"></div>
+    <div class="rowlabel" data-frow>Hardness → clip time</div>
     <div class="pills diff" id="diffPills"></div>
     <div class="rowlabel">Tries</div>
     <div class="pills tries" id="triesPills"></div>
@@ -287,6 +299,8 @@
       <span>Score <b id="score">0</b></span>
       <span>Streak <b id="streak">0</b></span>
       <span>Best <b id="best">0</b></span>
+      <span>Worth <b id="worth">–</b></span>
+      <span id="timerWrap" style="display:none">⏱ <b id="timer">–</b></span>
     </div>
 
     <div class="playzone">
@@ -309,10 +323,21 @@
         <input id="guess" type="text" placeholder="Name that track…" autocomplete="off" spellcheck="false">
       </div>
       <button class="btn" id="moreBtn" title="Doubles the clip, costs a try">+ Time</button>
+      <button class="btn" id="passBtn" style="display:none" title="Hand this song to the next team">🤝 Pass</button>
       <button class="btn warn" id="skipBtn">Give up ▸</button>
     </div>
 
     <div class="msg" id="msg"></div>
+  </div>
+
+  <div class="rscrim" id="lscrim"></div>
+  <div class="reveal" id="lbModal">
+    <div class="rtitle" id="lbTitle">🏆 Leaderboard</div>
+    <div id="lbBody" style="text-align:left;max-height:46vh;overflow-y:auto;margin-top:10px"></div>
+    <div class="actions">
+      <button class="btn warn" id="lbClear">Clear</button>
+      <button class="btn primary" id="lbClose">Close</button>
+    </div>
   </div>
 
   <div class="rscrim" id="iscrim"></div>
@@ -404,12 +429,21 @@ const DIFFS = [
   { id: 'imp', label: 'Impossible', len: 0.1, pts: 250 },
 ];
 const TRIES = [3, 4, 5, 6];
+const MODES = [
+  { id: 'classic', label: '🎮 Classic' },
+  { id: 'survival', label: '💀 Survival' },
+];
+const ROUNDOPTS = [3, 5, 10, 0];
+const TIMEROPTS = [0, 30, 60, 90];
 const PREVIEW = 30;
 
 let cat = CATS[0], lang = LANGS[0], mood = MOODS[0], era = ERAS[0], fame = FAMES[0], diff = DIFFS[0];
-let maxTries = 5;
+let maxTries = 5, mode = MODES[0], roundsPerTeam = 5, timerSetting = 0;
 let artistFilter = '';
-let teams = [], turn = 0;
+let teams = [], turn = 0, roundTeam = 0, teamRounds = [], passedTeams = new Set();
+let timerLeft = 0, timerInt = null;
+let LB = [];
+try { LB = JSON.parse(localStorage.getItem('bollyspot_lb') || '[]'); } catch (e) {}
 let current = null, offset = 0, tries = 0, roundOver = false;
 let score = 0, streak = 0, best = 0;
 let played = new Set();
@@ -475,6 +509,10 @@ $('artistList').innerHTML = topArtists.slice(0, 400).map(a => `<option value="${
 function baseFilters(s) { return cat.test(s) && lang.test(s); }
 function artistTest(s) { return !artistFilter || s.a.toLowerCase().includes(artistFilter.toLowerCase()); }
 function pool() {
+  if (artistFilter) {
+    const p = SONGS.filter(artistTest);
+    if (p.length) return p;
+  }
   const tiers = [
     s => baseFilters(s) && era.test(s.y) && mood.test(s) && fame.test(s) && artistTest(s),
     s => baseFilters(s) && era.test(s.y) && mood.test(s) && artistTest(s),
@@ -492,6 +530,22 @@ function pool() {
 }
 function snipSecs() { return Math.min(12, diff.len * Math.pow(2, tries)); }
 function fmt(v) { return (+v.toFixed(2)) + 's'; }
+function potential() { return Math.max(5, Math.round(diff.pts * Math.pow(0.6, tries))); }
+function levDist(a, b, cap) {
+  if (Math.abs(a.length - b.length) > cap) return cap + 1;
+  let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    let rowMin = i;
+    for (let j = 1; j <= b.length; j++) {
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      if (cur[j] < rowMin) rowMin = cur[j];
+    }
+    if (rowMin > cap) return cap + 1;
+    prev = cur;
+  }
+  return prev[b.length];
+}
 
 /* ---- sound effects (WebAudio, no assets) ---- */
 let actx = null;
@@ -534,14 +588,20 @@ function renderPills() {
   pillRow('moodPills', MOODS, mood, 'mood');
   pillRow('eraPills', ERAS, era, 'era');
   pillRow('famePills', FAMES, fame, 'fame');
+  pillRow('modePills', MODES, mode, 'mode');
   pillRow('diffPills', DIFFS, diff, 'diff');
   pillRow('triesPills', TRIES, maxTries, 'tries', x => x + ' tries');
+  pillRow('roundPills', ROUNDOPTS, roundsPerTeam, 'rounds', x => x === 0 ? '∞' : x + '/team');
+  pillRow('timerPills', TIMEROPTS, timerSetting, 'timer', x => x === 0 ? 'Off' : x + 's');
+  // an artist pick narrows to one artist — hide the now-redundant filter rows
+  const hide = artistFilter ? 'none' : '';
+  ['catPills', 'langPills', 'moodPills', 'eraPills', 'famePills'].forEach(id => $(id).style.display = hide);
 }
 function renderChips() {
   $('chipbar').innerHTML = artistFilter
-    ? `<div class="chip" id="artistChip">🎙 <b>${artistFilter}</b> ✕</div>` : '';
+    ? `<div class="chip" id="artistChip">🎙 <b>${artistFilter}</b> — all filters off ✕</div>` : '';
   const c = $('artistChip');
-  if (c) c.onclick = () => { artistFilter = ''; $('artistInput').value = ''; renderChips(); newRound(); };
+  if (c) c.onclick = () => { artistFilter = ''; $('artistInput').value = ''; renderChips(); renderPills(); newRound(); };
 }
 function renderTeams() {
   $('teambar').innerHTML = teams.map((t, i) =>
@@ -575,8 +635,50 @@ function renderRound() {
   $('snipLen').textContent = fmt(snipSecs());
   $('attempts').innerHTML = Array.from({ length: maxTries }, (_, i) =>
     `<div class="dot ${i < tries ? 'used' : i === tries ? 'current' : ''}"></div>`).join('');
+  $('worth').textContent = potential();
+  $('passBtn').style.display = teams.length > 1 ? '' : 'none';
   renderTimeline();
 }
+
+/* ---- guess timer ---- */
+function stopTimerClock() { if (timerInt) { clearInterval(timerInt); timerInt = null; } $('timerWrap').style.display = 'none'; }
+function startTimerClock() {
+  if (!timerSetting || timerInt || roundOver) return;
+  timerLeft = timerSetting;
+  $('timerWrap').style.display = '';
+  $('timer').textContent = timerLeft + 's';
+  timerInt = setInterval(() => {
+    timerLeft--;
+    $('timer').textContent = Math.max(0, timerLeft) + 's';
+    $('timer').style.color = timerLeft <= 10 ? 'var(--red)' : '';
+    if (timerLeft <= 0) {
+      stopTimerClock();
+      toast('⏰ Time up!', 'bad');
+      endRound(false);
+    }
+  }, 1000);
+}
+
+/* ---- leaderboard ---- */
+function addLB(ty, name, val) {
+  LB.push({ ty, name, val, d: new Date().toISOString().slice(0, 10) });
+  LB.sort((a, b) => b.val - a.val);
+  LB = LB.slice(0, 25);
+  try { localStorage.setItem('bollyspot_lb', JSON.stringify(LB)); } catch (e) {}
+}
+const LBICON = { survival: '💀', team: '👥', solo: '🎮' };
+function openLB(title, extraHtml) {
+  $('lbTitle').textContent = title || '🏆 Leaderboard';
+  $('lbBody').innerHTML = (extraHtml || '') + (LB.length
+    ? LB.map((e, i) => `<div class="lbrow"><span>#${i + 1} ${LBICON[e.ty] || ''} <span class="who">${e.name}</span></span><span><b>${e.val}</b> <small>${e.ty === 'survival' ? 'streak' : 'pts'} · ${e.d}</small></span></div>`).join('')
+    : '<div class="lbrow"><span class="who">Nothing here yet — finish a survival run or a team match!</span></div>');
+  $('lscrim').classList.add('open'); $('lbModal').classList.add('open');
+}
+function closeLB() { $('lscrim').classList.remove('open'); $('lbModal').classList.remove('open'); }
+$('lbBtn').onclick = () => { $('drawer').classList.remove('open'); $('scrim').classList.remove('open'); openLB(); };
+$('lbClose').onclick = closeLB;
+$('lscrim').onclick = closeLB;
+$('lbClear').onclick = () => { LB = []; try { localStorage.removeItem('bollyspot_lb'); } catch (e) {} openLB(); };
 
 function toast(text, kind) {
   const t = document.createElement('div');
@@ -589,13 +691,17 @@ function toast(text, kind) {
 
 function newRound() {
   stopAudio();
+  stopTimerClock();
   const p = pool();
   let candidates = p.filter(s => !played.has(s.p));
   if (!candidates.length) { played.clear(); candidates = p; }
   current = candidates[Math.floor(Math.random() * candidates.length)];
   played.add(current.p);
   tries = 0; roundOver = false;
-  offset = prefs.fromStart ? 0 : Math.random() * (PREVIEW - 13);
+  roundTeam = turn;
+  passedTeams = new Set();
+  // start a little into the preview: hooks (often the title line) sit at the very front
+  offset = prefs.fromStart ? 0 : 4 + Math.random() * (PREVIEW - 17);
   audio.src = current.p;
   $('reveal').classList.remove('open');
   $('rscrim').classList.remove('open');
@@ -628,6 +734,7 @@ function playSnippet() {
   audio.currentTime = offset;
   audio.volume = prefs.volume / 100;
   audio.play().then(() => {
+    startTimerClock();
     setPlayingUI(true);
     const t0 = performance.now();
     $('tlCursor').style.opacity = 1;
@@ -660,34 +767,63 @@ function useTry(reason, kind) {
 
 function submitGuess(song) {
   if (roundOver || !current) return;
-  const ok = song ? (song.k === current.k && song.c === current.c) : norm($('guess').value) === current.k;
+  let ok;
+  if (song) { ok = song.k === current.k && song.c === current.c; }
+  else {
+    // typed guess: forgive spelling — normalized match or small edit distance
+    const g = norm($('guess').value);
+    const cap = current.k.length >= 9 ? 2 : current.k.length >= 5 ? 1 : 0;
+    ok = g.length > 1 && (g === current.k || levDist(g, current.k, cap) <= cap);
+  }
   if (ok) { endRound(true); }
   else {
     $('guess').value = '';
     closeSuggest();
-    useTry('❌ Wrong', 'bad');
+    if (mode.id === 'survival') {
+      toast('💀 Wrong — run over!', 'bad');
+      endRound(false);
+      return;
+    }
+    const penalty = Math.max(2, Math.round(diff.pts * 0.1));
+    score = Math.max(0, score - penalty);
+    if (teams.length) teams[turn].score = Math.max(0, teams[turn].score - penalty);
+    renderStats(); renderTeams();
+    useTry(`❌ Wrong (−${penalty} pts)`, 'bad');
   }
 }
 
 function endRound(won) {
   roundOver = true;
   stopAudio();
+  stopTimerClock();
   closeSuggest();
   let gained = 0;
   if (won) {
-    gained = Math.max(5, Math.round(diff.pts * (1 - (tries / maxTries) * 0.6)));
+    gained = potential();
     score += gained; streak++;
     if (streak > best) best = streak;
     if (teams.length) teams[turn].score += gained;
     sfx('good');
     toast(`✅ Correct! +${gained} pts${teams.length ? ' for ' + teams[turn].name : ''}`, 'good');
   } else {
+    if (mode.id === 'survival' && streak > 0) {
+      addLB('survival', 'Survival run', streak);
+      toast(`💀 Run over — you survived ${streak} song${streak === 1 ? '' : 's'}`, 'bad');
+    } else {
+      toast('❌ Out of tries — it was “' + current.t + '”', 'bad');
+    }
     streak = 0;
     sfx('bad');
-    toast('❌ Out of tries — it was “' + current.t + '”', 'bad');
   }
   save(); renderStats(); renderTeams();
-  if (teams.length) turn = (turn + 1) % teams.length;
+  if (teams.length) {
+    if (teamRounds.length !== teams.length) teamRounds = teams.map(() => 0);
+    teamRounds[roundTeam]++;
+    turn = (roundTeam + 1) % teams.length;
+    if (roundsPerTeam > 0 && teamRounds.every(r => r >= roundsPerTeam)) {
+      setTimeout(matchOver, 600);
+    }
+  }
   $('verdict').textContent = won ? `Correct! +${gained} pts` : 'It was…';
   $('verdict').className = 'verdict ' + (won ? 'good' : 'bad');
   $('rArt').src = current.art || '';
@@ -771,20 +907,22 @@ $('artistInput').onchange = e => {
   const v = e.target.value.trim();
   if (!v) return;
   artistFilter = v;
-  renderChips(); newRound();
-  toast('🎙 Playing only ' + v, '');
+  renderChips(); renderPills(); newRound();
+  toast('🎙 Only ' + v + ' — other filters off', '');
 };
 $('artistClear').onclick = () => {
-  artistFilter = ''; $('artistInput').value = ''; renderChips(); newRound();
+  artistFilter = ''; $('artistInput').value = ''; renderChips(); renderPills(); newRound();
 };
 $('teamPills').onclick = e => {
   const b = e.target.closest('[data-teams]');
   if (!b) return;
   const n = +b.dataset.teams;
-  if (n === 0) { teams = []; turn = 0; }
+  if (n === 0) { teams = []; turn = 0; teamRounds = []; }
   else {
+    if (mode.id === 'survival') { mode = MODES[0]; renderPills(); toast('Teams on — back to Classic mode', ''); }
     teams = Array.from({ length: n }, (_, i) => ({ name: 'Team ' + (i + 1), score: 0 }));
     turn = 0;
+    teamRounds = teams.map(() => 0);
     toast('👥 ' + n + ' teams — pass the device each round!', '');
   }
   renderTeams(); newRound();
@@ -986,6 +1124,39 @@ $('clearMyBtn').onclick = () => {
   renderPills(); renderCounts(); toast('Imported songs cleared', '');
 };
 
+/* ---- team match & pass ---- */
+function matchOver() {
+  const ranked = teams.map((t, i) => ({ ...t, i })).sort((a, b) => b.score - a.score);
+  const winner = ranked[0];
+  const tie = ranked.length > 1 && ranked[1].score === winner.score;
+  if (!tie) addLB('team', winner.name, winner.score);
+  sfx('good');
+  const standings = ranked.map((t, i) =>
+    `<div class="lbrow"><span class="who">${i === 0 && !tie ? '👑 ' : ''}${t.name}</span><b>${t.score} pts</b></div>`).join('');
+  openLB(tie ? '🤝 Match over — tie!' : `🏆 ${winner.name} wins!`,
+    standings + '<div class="lbrow"><small>Scores reset for a new match. Past winners below.</small></div>');
+  teams.forEach(t => t.score = 0);
+  teamRounds = teams.map(() => 0);
+  turn = 0;
+  renderTeams();
+}
+$('passBtn').onclick = () => {
+  if (roundOver || teams.length < 2) return;
+  passedTeams.add(turn);
+  if (passedTeams.size >= teams.length) {
+    toast('Everyone passed!', 'bad');
+    endRound(false);
+    return;
+  }
+  let next = (turn + 1) % teams.length;
+  while (passedTeams.has(next)) next = (next + 1) % teams.length;
+  turn = next;
+  sfx('hint');
+  toast(`🤝 Passed — ${teams[turn].name}, same song, your shot!`, '');
+  $('msg').textContent = `${teams[turn].name} — same song, guess it!`;
+  renderTeams();
+};
+
 /* ---- events ---- */
 $('playBtn').onclick = () => { if (!roundOver) playSnippet(); };
 $('moreBtn').onclick = () => { if (!roundOver) useTry('⏩ Hint', ''); };
@@ -1040,7 +1211,28 @@ pillHandler('langPills', 'lang', LANGS, v => {
 pillHandler('moodPills', 'mood', MOODS, v => mood = v);
 pillHandler('eraPills', 'era', ERAS, v => era = v);
 pillHandler('famePills', 'fame', FAMES, v => fame = v);
+pillHandler('modePills', 'mode', MODES, v => {
+  if (v.id === 'survival' && teams.length) { toast('Survival is solo — teams turned off', ''); teams = []; turn = 0; renderTeams(); }
+  mode = v;
+  if (v.id === 'survival') toast('💀 Survival: one wrong guess ends the run!', '');
+});
 pillHandler('diffPills', 'diff', DIFFS, v => diff = v);
+$('roundPills').onclick = e => {
+  const b = e.target.closest('[data-rounds]');
+  if (!b) return;
+  roundsPerTeam = +b.dataset.rounds;
+  teamRounds = teams.map(() => 0);
+  renderPills();
+  toast(roundsPerTeam ? `Match: ${roundsPerTeam} rounds per team` : 'Endless team play', '');
+};
+$('timerPills').onclick = e => {
+  const b = e.target.closest('[data-timer]');
+  if (!b) return;
+  timerSetting = +b.dataset.timer;
+  renderPills();
+  stopTimerClock();
+  toast(timerSetting ? `⏱ ${timerSetting}s to guess once you hit play` : 'Timer off', '');
+};
 $('triesPills').onclick = e => {
   const b = e.target.closest('[data-tries]');
   if (!b) return;

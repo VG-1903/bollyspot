@@ -326,7 +326,15 @@
     <textarea id="impText" placeholder="Kesariya - Arijit Singh&#10;Husn - Anuv Jain&#10;Blinding Lights - The Weeknd"
       style="width:100%;height:110px;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:10px;font-size:.9rem;resize:vertical"></textarea>
     <input type="file" id="impFile" accept=".csv,.txt" style="margin:10px 0;width:100%;color:var(--muted);font-size:.85rem">
-    <div class="rmeta" id="impStatus" style="min-height:20px"></div>
+    <div class="rmeta" style="margin:6px 0 8px;border-top:1px solid var(--line);padding-top:10px">
+      <b>— or connect Spotify directly —</b><br>
+      Needs a free app from <b>developer.spotify.com/dashboard</b>: create an app,
+      add this page's URL as Redirect URI, paste its Client ID here (saved on this device).
+    </div>
+    <input type="text" id="spClientId" placeholder="Spotify Client ID"
+      style="width:100%;padding:10px 12px;border-radius:10px;background:var(--panel2);color:var(--text);border:1px solid var(--line);font-size:.9rem;outline:none">
+    <button class="btn" id="spConnect" style="width:100%;margin-top:8px;padding:11px">💚 Connect Spotify &amp; scan Liked Songs</button>
+    <div class="rmeta" id="impStatus" style="min-height:20px;margin-top:8px"></div>
     <div class="tl-bar" style="position:relative;margin:8px 0"><div class="tl-fill" id="impProg" style="width:0%"></div></div>
     <div class="actions">
       <button class="btn" id="impCancel">Close</button>
@@ -881,10 +889,8 @@ $('impFile').onchange = e => {
   rd.onload = () => { $('impText').value = rd.result; $('impStatus').textContent = 'File loaded — hit Scan & match.'; };
   rd.readAsText(f);
 };
-$('impStart').onclick = async () => {
-  if (importing) return;
-  const tracks = extractTracks($('impText').value);
-  if (!tracks.length) { $('impStatus').textContent = 'Nothing to scan — paste songs or choose a CSV first.'; return; }
+async function scanTracks(tracks) {
+  if (importing || !tracks.length) return;
   importing = true;
   $('impStart').textContent = 'Scanning…';
   const have = new Set(MY.map(s => s.p));
@@ -908,7 +914,70 @@ $('impStart').onclick = async () => {
   $('impStatus').textContent = `Done — ${matched} new songs added (${MY.length} total in 💚 My songs).`;
   toast(`💚 ${matched} songs added to My songs`, 'good');
   renderCounts();
+}
+$('impStart').onclick = () => {
+  const tracks = extractTracks($('impText').value);
+  if (!tracks.length) { $('impStatus').textContent = 'Nothing to scan — paste songs or choose a CSV first.'; return; }
+  scanTracks(tracks);
 };
+
+/* ---- Spotify Connect (PKCE, optional: needs user-created Client ID) ---- */
+const SP_REDIRECT = location.origin + location.pathname;
+try { $('spClientId').value = localStorage.getItem('bollyspot_spid') || ''; } catch (e) {}
+function b64url(buf) {
+  return btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+$('spConnect').onclick = async () => {
+  const cid = $('spClientId').value.trim();
+  if (!cid) { $('impStatus').textContent = 'Paste your Spotify Client ID first (developer.spotify.com/dashboard).'; return; }
+  if (location.protocol === 'file:') { $('impStatus').textContent = 'Spotify login needs the app served over http(s), not opened as a file.'; return; }
+  try { localStorage.setItem('bollyspot_spid', cid); } catch (e) {}
+  const verifier = b64url(crypto.getRandomValues(new Uint8Array(48)));
+  const challenge = b64url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)));
+  try { sessionStorage.setItem('bollyspot_spv', verifier); } catch (e) {}
+  location.href = 'https://accounts.spotify.com/authorize?' + new URLSearchParams({
+    client_id: cid, response_type: 'code', redirect_uri: SP_REDIRECT,
+    scope: 'user-library-read', code_challenge_method: 'S256', code_challenge: challenge,
+  });
+};
+async function spotifyReturn() {
+  const code = new URLSearchParams(location.search).get('code');
+  if (!code) return;
+  history.replaceState({}, '', SP_REDIRECT);
+  let verifier = '', cid = '';
+  try { verifier = sessionStorage.getItem('bollyspot_spv') || ''; cid = localStorage.getItem('bollyspot_spid') || ''; } catch (e) {}
+  if (!verifier || !cid) return;
+  openImport();
+  $('impStatus').textContent = 'Connecting to Spotify…';
+  try {
+    const tok = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code', code, redirect_uri: SP_REDIRECT,
+        client_id: cid, code_verifier: verifier,
+      }),
+    }).then(r => r.json());
+    if (!tok.access_token) { $('impStatus').textContent = 'Spotify login failed: ' + (tok.error_description || tok.error || 'no token'); return; }
+    $('impStatus').textContent = 'Reading your Liked Songs…';
+    const tracks = [];
+    let url = 'https://api.spotify.com/v1/me/tracks?limit=50';
+    while (url && tracks.length < 300) {
+      const page = await fetch(url, { headers: { Authorization: 'Bearer ' + tok.access_token } }).then(r => r.json());
+      if (!page.items) break;
+      for (const it of page.items) {
+        if (it.track) tracks.push({ t: it.track.name, a: (it.track.artists[0] || {}).name || '' });
+      }
+      url = page.next;
+    }
+    if (!tracks.length) { $('impStatus').textContent = 'No liked songs found on this account.'; return; }
+    $('impStatus').textContent = `Found ${tracks.length} liked songs — matching previews…`;
+    scanTracks(tracks);
+  } catch (e) {
+    $('impStatus').textContent = 'Spotify scan failed — ' + e.message;
+  }
+}
+spotifyReturn();
 $('clearMyBtn').onclick = () => {
   MY = [];
   try { localStorage.removeItem('bollyspot_my'); } catch (e) {}

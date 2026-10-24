@@ -35,9 +35,15 @@ comes from iTunes matches.)
 
 ## Structure
 
-- `index.html` — the whole game, self-contained (song catalog embedded)
-- `index.template.html` — source without the embedded catalog; the build
-  replaces `/*__SONGS__*/` inside the `songdata` script tag with the JSON
+- `index.html` — the whole game, self-contained (song catalog embedded);
+  this is what Vercel serves
+- `index.template.html` — source without the embedded catalog
+- `data/songs.json` — the song catalog (source of truth)
+- `build.ps1` — embeds `data/songs.json` into the template to produce
+  `index.html`; run it after changing either file
+- `tools/fetch_famous_bolly.ps1` — merges iconic film soundtracks and top
+  tracks of famous artists from the iTunes Search API into
+  `data/songs.json` (deduplicated, film year used as the release year)
 
 Audio streams from Apple's preview CDN, so an internet connection is needed.
 Fan-made game; not affiliated with Apple or any label.

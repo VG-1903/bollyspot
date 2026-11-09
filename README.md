@@ -1,49 +1,56 @@
 # BollySpot 🎬🎵
 
-Guess the Bollywood song from a tiny audio clip — a Bollywood take on
-[Songspot](https://songspot.net)-style games.
+Guess the song from a tiny audio clip — Bollywood, Hollywood, Indie and Punjabi.
+Live at **https://bollyspot.vercel.app**
 
-**Play:** open `index.html`, or the deployed site.
+## Modes
 
-## Features
+- **Classic** — endless, with your own filters
+- **Survival** — one miss ends the run; best streaks go on the global leaderboard
+- **Daily** — the same 10 songs for everyone each day (rolls over at midnight IST)
+- **Friends** — create a room; everyone with the link gets the same 10 songs and a shared leaderboard
+- **Party** — pass-and-play teams on one device, with passing and per-team rounds
 
-- 2,295 Bollywood songs from the 1950s to the 2020s, with 30-second
-  preview clips and album art via the iTunes Search API
-- Era filters: Classic, 90s, 2000s, 2010s, 2020s
-- Five difficulties — from a 3-second clip (Easy) down to 0.1s (Impossible)
-- 5 attempts per song; each miss or hint doubles the clip length
-- Score, streak and best-streak saved locally
-- Space bar replays the snippet
+Filters are multi-select (e.g. Bollywood + Punjabi, 2000s + 2010s), plus mood,
+famous-only and a single-artist mode. Search tolerates Hinglish spelling variants,
+typos, missing spaces and initials (`ddlj`, `kkhh`).
 
-## Play with your own songs
+## Architecture
 
-Open ☰ → **Import my songs**:
+```
+index.html, css/, js/         static frontend (ES modules, no build step)
+  js/app.js                   game, modes, UI
+  js/search.js                search engine
+  js/challenge.js             seeded daily/room song sequences; room codes encode their settings
+  js/api.js                   player identity + leaderboard client
+data/songs.json               packed song catalog, cached at the edge
+api/scores.js                 Vercel serverless function: global leaderboards
+lib/redis.js                  Upstash Redis REST client (no dependencies)
+tools/                        catalog pipeline (not deployed)
+```
 
-- **Paste** a list (`Song - Artist`, one per line), or
-- **Drop a CSV** export of your Spotify library (get one from
-  [exportify.net](https://exportify.net)), or
-- **Connect Spotify** directly: create a free app at
-  [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard),
-  add the game's URL as a Redirect URI, paste the app's Client ID into the
-  dialog, and hit Connect — your Liked Songs are scanned automatically
-  (up to 300).
+Players need no account: each device gets a random player id plus a chosen name.
+Daily and room songs are derived from a seed, so every player sees the same
+sequence without any server state; only scores are stored.
 
-Every track is matched to a playable 30-second preview through the iTunes
-Search API and saved in your browser as the **💚 My songs** catalog.
-(Spotify's own API no longer serves audio previews, so playback always
-comes from iTunes matches.)
+### Enabling global leaderboards
 
-## Structure
+The scores API stores data in Redis via Upstash. In the Vercel dashboard open the
+project → **Storage** → **Create** → **Upstash for Redis** (free tier) and connect it
+to the project; Vercel sets `KV_REST_API_URL` / `KV_REST_API_TOKEN` automatically.
+Redeploy. Until then the game works fully and keeps results on each device.
 
-- `index.html` — the whole game, self-contained (song catalog embedded);
-  this is what Vercel serves
-- `index.template.html` — source without the embedded catalog
-- `data/songs.json` — the song catalog (source of truth)
-- `build.ps1` — embeds `data/songs.json` into the template to produce
-  `index.html`; run it after changing either file
-- `tools/fetch_famous_bolly.ps1` — merges iconic film soundtracks and top
-  tracks of famous artists from the iTunes Search API into
-  `data/songs.json` (deduplicated, film year used as the release year)
+## Rebuilding the catalog
 
-Audio streams from Apple's preview CDN, so an internet connection is needed.
-Fan-made game; not affiliated with Apple or any label.
+```
+powershell -File tools/build_catalog.ps1   # ~40 min, rate-limited iTunes searches
+node tools/dedupe.js                       # clean, dedupe, pack -> data/songs.json
+```
+
+`tools/sources.json` lists the films and artists that get searched. Alternate
+recordings (remix, unplugged, live, acoustic, lofi, reprise, mashup, covers…) are
+rejected from the raw iTunes titles before any cleanup, so only original
+recordings make it in.
+
+Fan-made; not affiliated with Apple, any label or artist. 30-second previews and
+artwork are streamed from Apple's servers via the iTunes Search API.

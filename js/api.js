@@ -31,6 +31,15 @@ async function call(url, opts) {
   }
 }
 
+let trendingCache = null;
+export function getTrending() {
+  if (!trendingCache) {
+    trendingCache = fetch('/api/trending').then(r => (r.ok ? r.json() : null)).catch(() => null);
+    trendingCache.then(j => { if (!j) trendingCache = null; });
+  }
+  return trendingCache;
+}
+
 export function getBoard(board) {
   return call(`/api/scores?board=${encodeURIComponent(board)}&playerId=${me.id}`);
 }

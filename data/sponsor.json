@@ -1,0 +1,11 @@
+{
+  "active": false,
+  "name": "Sponsor name",
+  "headline": "presents this week's new drops",
+  "url": "https://example.com",
+  "color": "#ff4da6",
+  "start": "2026-11-09",
+  "end": "2026-11-16",
+  "periods": ["w"],
+  "trackIds": []
+}

@@ -33,6 +33,46 @@ Players need no account: each device gets a random player id plus a chosen name.
 Daily and room songs are derived from a seed, so every player sees the same
 sequence without any server state; only scores are stored.
 
+### Trending (refreshes itself)
+
+`/api/trending` reads Apple's live charts (Apple Music most-played for India and the
+US, plus the iTunes India Bollywood chart), fetches 30-second previews, drops
+regional-language, devotional, score and remix tracks, and picks three sets of 10:
+
+| Period | Pool | Rolls over |
+|---|---|---|
+| Today's charts (`d`) | top of the current charts | midnight IST |
+| This week's new drops (`w`) | released in the last ~3 weeks | Monday (ISO week) |
+| This month's hits (`m`) | released in the last ~2 months | 1st of the month |
+
+Each set is ~6 Indian + 4 international songs, at most 2 per Indian artist and 1 per
+international artist. Responses are edge-cached for 6 hours. With Redis connected,
+each period's picks are frozen on first use so every player gets the same songs.
+
+### Selling a sponsored slot
+
+Edit `data/sponsor.json` and redeploy:
+
+```json
+{
+  "active": true,
+  "name": "Label name",
+  "headline": "presents this week's new drops",
+  "url": "https://link-to-the-campaign",
+  "color": "#ff4da6",
+  "start": "2026-11-16",
+  "end": "2026-11-22",
+  "periods": ["w"],
+  "trackIds": ["6829145293", "6826737455"]
+}
+```
+
+`trackIds` are Apple Music / iTunes track ids (the number at the end of a song's
+Apple Music link). Up to 4 of them lead the sponsored period's 10 songs, and the
+challenge shows a "Presented by …" banner linking to `url`. Sponsored picks are only
+frozen for periods that start while the sponsorship is active, so set it up before
+the period begins (e.g. before Monday for a weekly slot).
+
 ### Enabling global leaderboards
 
 The scores API stores data in Redis via Upstash. In the Vercel dashboard open the

@@ -1,6 +1,6 @@
-import { loadCatalog, previewUrl, artUrl } from './data.js';
-import { search, highlight, closeEnough } from './search.js';
-import { player, setName, getBoard, submitScore } from './api.js';
+import { loadCatalog, previewUrl, artUrl, prepare } from './data.js';
+import { search, highlight, closeEnough, norm } from './search.js';
+import { player, setName, getBoard, submitScore, getTrending } from './api.js';
 import { sfx as playSfx } from './sfx.js';
 import { ROUNDS, ROOM_CATS, encodeRoom, decodeRoom, dailyConfig, todayKey, prettyDay, seededPick, hashStr } from './challenge.js';
 import { loadMySongs, initImporter } from './importer.js';
@@ -13,6 +13,7 @@ const RING = 2 * Math.PI * 54;
 /* ------------------------------------------------------------------ config */
 const MODES = [
   { id: 'classic', label: '🎮 Classic', sub: 'endless' },
+  { id: 'trend', label: '🔥 Trending', sub: 'fresh every day' },
   { id: 'survival', label: '💀 Survival', sub: '1 miss = out' },
   { id: 'daily', label: '📅 Daily', sub: 'same 10 for all' },
   { id: 'room', label: '🏠 Friends', sub: 'share a room' },
@@ -103,7 +104,7 @@ function activePool() {
   return poolFor(S.f, S.songs, need);
 }
 function searchScope() {
-  if (S.challenge) return S.songs.filter(s => s.c !== 'my');
+  if (S.challenge) return S.songs.filter(s => s.c !== 'my').concat(S.trendSongs || []);
   if (S.f.artist) return S.songs;
   return S.songs.filter(s => (S.f.cats.size ? S.f.cats.has(s.c) : s.c !== 'my') && (!S.f.langs.size || S.f.langs.has(s.l)));
 }
@@ -204,9 +205,13 @@ function renderChallengeBar() {
   const ch = S.challenge;
   $('challengeBar').hidden = !ch;
   if (!ch) return;
+  const unranked = ch.ranked ? '' : ' · replay (unranked)';
+  const sp = ch.cfg.sponsor;
   const title = ch.kind === 'daily'
-    ? `📅 <b>Daily challenge</b> · ${prettyDay(ch.cfg.code)}${ch.ranked ? '' : ' · replay (unranked)'}`
-    : `🏠 <b>Room ${esc(ch.cfg.code)}</b> · ${DIFFS.find(d => d.id === ch.cfg.diff).label}, ${ch.cfg.tries} tries`;
+    ? `📅 <b>Daily challenge</b> · ${prettyDay(ch.cfg.code)}${unranked}`
+    : ch.kind === 'trend'
+      ? `🔥 <b>${esc(ch.cfg.label)}</b>${unranked}${sp ? ` · <span class="sp-tag">presented by</span> <a href="${esc(sp.url)}" target="_blank" rel="noopener sponsored" style="color:var(--text);font-weight:800">${esc(sp.name)}</a>` : ''}`
+      : `🏠 <b>Room ${esc(ch.cfg.code)}</b> · ${DIFFS.find(d => d.id === ch.cfg.diff).label}, ${ch.cfg.tries} tries`;
   const bars = Array.from({ length: ROUNDS }, (_, i) =>
     `<i class="${i < ch.results.length ? (ch.results[i] ? 'win' : 'loss') : i === ch.round ? 'now' : ''}"></i>`).join('');
   $('challengeBar').innerHTML =
@@ -347,8 +352,10 @@ function useTry(reason, kind) {
 function submitGuess(song) {
   if (S.roundOver || !S.current) return;
   const typed = $('guess').value;
+  // the same song can sit in the catalog and in the live charts under different categories
+  const lead = s => norm(s.a.split(/,|&/)[0]);
   const ok = song
-    ? song.k === S.current.k && song.c === S.current.c
+    ? song.k === S.current.k && (song.c === S.current.c || lead(song) === lead(S.current))
     : closeEnough(typed, S.current);
   if (ok) { endRound(true); return; }
   $('guess').value = ''; $('clearQ').hidden = true;
@@ -464,6 +471,7 @@ document.addEventListener('click', e => { if (!e.target.closest('.searchbox')) c
 function setMode(id) {
   if (id === 'daily') { startChallenge('daily', dailyConfig()); return; }
   if (id === 'room') { openModal('roomModal'); return; }
+  if (id === 'trend') { openTrending(); return; }
   if (S.challenge) leaveChallenge();
   S.mode = id;
   if (id === 'party') {
@@ -487,24 +495,69 @@ function challengeSeq(cfg) {
   return seededPick(poolFor(f, catalog, ROUNDS).pool, cfg.seed, ROUNDS);
 }
 function startChallenge(kind, cfg) {
-  const seq = challengeSeq(cfg);
+  const seq = cfg.seq || challengeSeq(cfg);
   if (seq.length < ROUNDS) { toast('Not enough songs for that challenge', 'bad'); return; }
   if (!S.challenge) S.saved = { diff: S.diff, maxTries: S.maxTries, mode: S.mode };
-  const daily = store.get('bollyspot_daily', {});
+  const board = kind === 'daily' ? 'daily:' + cfg.code : kind === 'trend' ? cfg.board : 'room:' + cfg.code;
+  const done = store.get('bollyspot_done', {});
   S.challenge = {
-    kind, cfg, seq, round: 0, results: [], points: 0,
-    board: kind === 'daily' ? 'daily:' + cfg.code : 'room:' + cfg.code,
-    ranked: kind !== 'daily' || daily.day !== cfg.code,
+    kind, cfg, seq, round: 0, results: [], points: 0, board,
+    ranked: kind === 'room' || done[board] === undefined,
   };
+  if (kind === 'trend') { S.lastTrend = { board, label: cfg.label }; closeModal('trendModal'); }
   S.mode = kind; S.diff = cfg.diff; S.maxTries = cfg.tries; S.teams = [];
   if (kind === 'room') {
     S.lastRoom = cfg.code; store.set('bollyspot_lastroom', cfg.code);
     history.replaceState({}, '', '/?room=' + cfg.code);
   }
-  if (kind === 'daily' && !S.challenge.ranked) toast(`You already played today (${daily.score} pts) — this replay won't count`);
+  if (!S.challenge.ranked) toast(`You already played this one (${done[board]} pts) — this replay won't count`);
   closeModal('roomModal');
   renderAll(); newRound();
 }
+/* ------------------------------------------------------------------ trending */
+const PERIODS = [
+  { id: 'd', emoji: '📈', title: "Today's charts", sub: 'What India and the world are playing right now' },
+  { id: 'w', emoji: '🆕', title: "This week's new drops", sub: 'Fresh releases from the last few weeks' },
+  { id: 'm', emoji: '🏆', title: "This month's biggest hits", sub: 'The month so far — monthly leaderboard' },
+];
+function periodLabel(p, key) {
+  if (p === 'd') return "Today's charts · " + prettyDay(key);
+  if (p === 'w') return "This week's drops";
+  return new Date(Date.UTC(+key.slice(0, 4), +key.slice(4, 6) - 1, 1)).toLocaleDateString('en-IN', { month: 'long', timeZone: 'UTC' }) + ' hits';
+}
+async function openTrending() {
+  openModal('trendModal');
+  const data = await getTrending();
+  if (!data || !data.songs) {
+    $('trendCards').innerHTML = '<div class="lbnote">Couldn\'t reach the charts right now — try again in a minute.</div>';
+    return;
+  }
+  S.trendSongs = data.songs.map(s => prepare({ ...s }));
+  const prepared = new Map(S.trendSongs.map(s => [s.id, s]));
+  const sp = data.sponsor;
+  $('sponsorBanner').innerHTML = sp && sp.periods.length
+    ? `<div class="sponsor" style="--sp:${esc(sp.color || '#ff4da6')}"><span class="sp-tag">Presented by</span><a href="${esc(sp.url)}" target="_blank" rel="noopener sponsored">${esc(sp.name)}</a><span>${esc(sp.headline || '')}</span></div>`
+    : '';
+  const done = store.get('bollyspot_done', {});
+  $('trendCards').innerHTML = PERIODS.map(p => {
+    const board = `trend:${p.id}:${data.periods[p.id]}`;
+    const played = done[board];
+    const sponsored = sp && sp.periods.includes(p.id) ? ` · <b style="display:inline;color:var(--a1)">sponsored by ${esc(sp.name)}</b>` : '';
+    return `<button class="trend-card" data-period="${p.id}"><span class="emoji">${p.emoji}</span><span class="grow"><b>${p.title}</b><small>${p.sub}${sponsored}</small></span>${played !== undefined ? `<span class="done">✓ ${played} pts</span>` : '<span class="go">Play 10 →</span>'}</button>`;
+  }).join('');
+  $('trendCards').onclick = e => {
+    const card = e.target.closest('[data-period]');
+    if (!card) return;
+    const p = card.dataset.period, key = data.periods[p];
+    const seq = data.picks[p].map(id => prepared.get(id)).filter(Boolean);
+    startChallenge('trend', {
+      code: key, period: p, seq, diff: 'medium', tries: 5,
+      board: `trend:${p}:${key}`, label: periodLabel(p, key),
+      sponsor: sp && sp.periods.includes(p) ? sp : null,
+    });
+  };
+}
+
 function leaveChallenge() {
   if (!S.challenge) return;
   if (S.saved) { S.diff = S.saved.diff; S.maxTries = S.saved.maxTries; }
@@ -515,9 +568,9 @@ async function finishChallenge() {
   const ch = S.challenge;
   closeModal('revealModal');
   const squares = ch.results.map(r => (r ? '🟩' : '🟥')).join('');
-  const label = ch.kind === 'daily' ? `Daily · ${prettyDay(ch.cfg.code)}` : `Room ${ch.cfg.code}`;
+  const label = ch.kind === 'daily' ? `Daily · ${prettyDay(ch.cfg.code)}` : ch.kind === 'trend' ? ch.cfg.label : `Room ${ch.cfg.code}`;
   const shareText = `BollySpot ${label} — ${ch.points} pts\n${squares}\n${ch.kind === 'room' ? roomUrl(ch.cfg.code) : location.origin}`;
-  addHistory(ch.kind === 'daily' ? '📅 Daily ' + prettyDay(ch.cfg.code) : '🏠 Room ' + ch.cfg.code, ch.points, 'pts');
+  addHistory({ daily: '📅 ', trend: '🔥 ', room: '🏠 ' }[ch.kind] + label, ch.points, 'pts');
   sfx('win');
   // the challenge is over: carry on in Classic behind the results sheet
   leaveChallenge();
@@ -525,7 +578,7 @@ async function finishChallenge() {
   renderAll(); newRound();
   const extra = `<div class="result-big">${label}<b>${ch.points} pts</b><div>${squares}</div></div>
     <div class="row-actions"><button class="btn" id="shareRes">📤 Share result</button><button class="btn primary" id="playOn">Keep playing</button></div>`;
-  const shown = openBoards(ch.kind === 'daily' ? 'daily' : 'room', { title: '🏁 Challenge complete', extra, roomCode: ch.cfg.code });
+  const shown = openBoards(ch.kind, { title: '🏁 Challenge complete', extra, roomCode: ch.kind === 'room' ? ch.cfg.code : null });
   $('shareRes').onclick = () => {
     if (navigator.share) navigator.share({ text: shareText }).catch(() => {});
     else copyText(shareText, 'Result copied — paste it anywhere!');
@@ -534,7 +587,7 @@ async function finishChallenge() {
   await shown;
   const submit = () => submitScore(ch.board, Math.max(1, ch.points)).then(r => { if (r && r.configured && boardTab !== 'local') renderBoardData(r); });
   if (ch.ranked && ch.points > 0) {
-    if (ch.kind === 'daily') store.set('bollyspot_daily', { day: ch.cfg.code, score: ch.points });
+    if (ch.kind !== 'room') store.set('bollyspot_done', { ...store.get('bollyspot_done', {}), [ch.board]: ch.points });
     requireName(submit);
   }
 }
@@ -632,12 +685,14 @@ async function loadTab(tab) {
     return;
   }
   $('lbList').innerHTML = '<div class="lbnote">Loading…</div>';
-  const board = tab === 'survival' ? 'survival' : tab === 'daily' ? 'daily:' + todayKey() : 'room:' + boardRoom;
+  const board = tab === 'survival' ? 'survival' : tab === 'daily' ? 'daily:' + todayKey()
+    : tab === 'trend' ? S.lastTrend.board : 'room:' + boardRoom;
   renderBoardData(await getBoard(board));
 }
 async function openBoards(tab = 'survival', opts = {}) {
   boardRoom = opts.roomCode || (S.challenge && S.challenge.kind === 'room' ? S.challenge.cfg.code : S.lastRoom);
   const tabs = [['survival', '💀 Survival'], ['daily', '📅 Today\'s daily']];
+  if (S.lastTrend) tabs.push(['trend', '🔥 ' + S.lastTrend.label]);
   if (boardRoom) tabs.push(['room', '🏠 Room ' + boardRoom]);
   tabs.push(['local', '📱 This device']);
   $('lbTitle').textContent = opts.title || 'Leaderboards';
@@ -647,7 +702,7 @@ async function openBoards(tab = 'survival', opts = {}) {
   await loadTab(tabs.some(t => t[0] === tab) ? tab : 'survival');
 }
 $('lbTabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) loadTab(b.dataset.tab); });
-$('lbBtn').onclick = () => openBoards(S.mode === 'daily' ? 'daily' : S.mode === 'room' ? 'room' : 'survival');
+$('lbBtn').onclick = () => openBoards(['daily', 'room', 'trend'].includes(S.mode) ? S.mode : 'survival');
 
 /* ------------------------------------------------------------------ player name */
 function requireName(then) {

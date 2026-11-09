@@ -1,5 +1,6 @@
 {
   "cleanUrls": true,
+  "functions": { "api/trending.js": { "maxDuration": 30 } },
   "headers": [
     {
       "source": "/data/(.*)",

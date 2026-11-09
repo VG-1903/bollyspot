@@ -4,12 +4,13 @@
 // Boards: "survival" (best streak), "daily:YYYYMMDD" (daily challenge points),
 //         "room:<code>" (friends' room points).
 const { configured, pipeline } = require('../lib/redis');
+const { trendBoardAllowed } = require('../lib/periods');
 
-const BOARD_RX = /^(survival|daily:\d{8}|room:[a-z0-9]{6,24})$/;
+const BOARD_RX = /^(survival|daily:\d{8}|room:[a-z0-9]{6,24}|trend:(d:\d{8}|w:\d{6}|m:\d{6}))$/;
 const PLAYER_RX = /^[a-z0-9]{8,32}$/;
 const TOP = 25;
 const KEEP_SECONDS = 60 * 60 * 24 * 45;
-const MAX_SCORE = { survival: 5000, daily: 5000, room: 5000 };
+const MAX_SCORE = { survival: 5000, daily: 5000, room: 5000, trend: 5000 };
 const POSTS_PER_MINUTE = 20;
 
 function boardKind(board) { return board.split(':')[0]; }
@@ -67,6 +68,9 @@ module.exports = async (req, res) => {
       }
       if (boardKind(board) === 'daily' && !dailyAllowed(board)) {
         return res.status(400).json({ error: 'daily closed' });
+      }
+      if (boardKind(board) === 'trend' && !trendBoardAllowed(board)) {
+        return res.status(400).json({ error: 'period closed' });
       }
 
       const ip = String(req.headers['x-forwarded-for'] || 'local').split(',')[0].trim();

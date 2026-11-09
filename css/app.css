@@ -296,6 +296,26 @@ footer { color: var(--dim); font-size: .76rem; text-align: center; padding: 10px
 .result-big { text-align: center; padding: 6px 0; }
 .result-big b { display: block; font-size: 2.6rem; font-weight: 800; background: linear-gradient(100deg, var(--a1), var(--a2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
 
+.trend-cards { display: grid; gap: 10px; }
+.trend-card {
+  display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; padding: 14px 16px;
+  border-radius: 16px; border: 1px solid var(--line); background: var(--surface2); color: var(--text); cursor: pointer;
+  transition: border-color .15s, transform .12s;
+}
+.trend-card:hover { border-color: rgba(var(--a1-rgb), .6); transform: translateY(-1px); }
+.trend-card .emoji { font-size: 1.8rem; }
+.trend-card .grow { flex: 1; min-width: 0; }
+.trend-card b { display: block; font-size: 1.02rem; }
+.trend-card small { color: var(--muted); }
+.trend-card .go { font-weight: 800; color: var(--a1); white-space: nowrap; }
+.trend-card .done { color: var(--good); font-weight: 700; white-space: nowrap; }
+.sponsor {
+  display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 14px;
+  background: linear-gradient(110deg, color-mix(in srgb, var(--sp, #ff4da6) 30%, transparent), transparent);
+  border: 1px solid color-mix(in srgb, var(--sp, #ff4da6) 60%, transparent); font-size: .9rem;
+}
+.sponsor a { color: var(--text); font-weight: 800; }
+.sp-tag { font-size: .68rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
 .setting { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); font-weight: 600; font-size: .92rem; }
 .setting.col { flex-direction: column; align-items: stretch; }
 .setting input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--a1); }

@@ -108,7 +108,7 @@ export function search(query, songs, limit = 8) {
   hits.sort((a, b) => a[0] - b[0] || a[1].t.length - b[1].t.length);
   const seen = new Set(), out = [];
   for (const [, s] of hits) {
-    const key = s.k + '|' + s.c + '|' + norm(s.a.split(/,|&/)[0]);
+    const key = s.k + '|' + norm(s.a.split(/,|&/)[0]);
     if (seen.has(key)) continue;
     seen.add(key);
     out.push(s);

@@ -468,3 +468,107 @@ details.spotify[open] { display: flex; flex-direction: column; gap: 8px; }
   *, *::before, *::after { animation-duration: .001s !important; animation-iteration-count: 1 !important; transition-duration: .001s !important; }
   .confetti { display: none; }
 }
+
+/* ================= one-screen layout =================
+   The whole game fits the window with no page scrolling: the stage sizes itself
+   from the window height, the filter panel floats over the game instead of pushing
+   it down, and search results open upward so they stay above a phone keyboard. */
+html, body { height: 100%; }
+body { height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
+.topbar { position: relative; flex: none; padding-top: clamp(7px, 1.4vh, 12px); padding-bottom: clamp(7px, 1.4vh, 12px); }
+.app {
+  flex: 1; min-height: 0; width: 100%; overflow-y: auto; scrollbar-width: none;
+  padding-top: clamp(8px, 2vh, 20px); padding-bottom: clamp(8px, 1.6vh, 18px); gap: clamp(7px, 1.5vh, 14px);
+}
+.app::-webkit-scrollbar { display: none; }
+.app > * { flex: none; }
+footer { padding: 0; font-size: .72rem; }
+
+.mode { display: grid; grid-template-columns: auto 1fr; column-gap: 6px; align-items: center; text-align: left; padding: clamp(6px, 1.2vh, 10px) 12px; }
+.mode small { grid-column: 1 / -1; }
+
+.filters { position: relative; z-index: 36; }
+.filters-head { padding: clamp(9px, 1.5vh, 13px) 16px; }
+.filters-summary { flex-wrap: nowrap; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); }
+.filters-body {
+  position: absolute; left: 0; right: 0; top: calc(100% + 8px);
+  max-height: min(540px, calc(100dvh - 200px)); overflow-y: auto; overscroll-behavior: contain;
+  background: #191622; border: 1px solid var(--line2); border-radius: 20px; padding: 2px 16px 16px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, .7);
+}
+
+.stage {
+  --rec: clamp(84px, 21vh, 150px);
+  flex: 1 0 auto; max-height: 640px; justify-content: space-between;
+  padding-top: clamp(10px, 1.8vh, 16px); padding-bottom: clamp(10px, 2vh, 22px);
+}
+.stat { padding: clamp(4px, 1vh, 9px) 6px; }
+.stat b { font-size: clamp(1.05rem, 3vh, 1.4rem); }
+.player { margin: clamp(12px, 3vh, 26px) 0 clamp(2px, 1vh, 8px); }
+.playbtn { width: var(--rec); height: var(--rec); }
+.playbtn .icon { width: calc(var(--rec) * .23); height: calc(var(--rec) * .23); }
+.cliplen { font-size: clamp(1.6rem, 5.2vh, 2.5rem); }
+.eq { margin-top: clamp(4px, 1.2vh, 10px); }
+.timeline { margin-top: clamp(10px, 2.2vh, 16px); }
+.attempts { margin-top: clamp(8px, 1.6vh, 14px); }
+.guess { margin-top: clamp(10px, 2.4vh, 22px); gap: clamp(8px, 1.4vh, 12px); }
+#guess { padding-top: clamp(11px, 1.9vh, 16px); padding-bottom: clamp(11px, 1.9vh, 16px); }
+.btn { padding-top: clamp(8px, 1.4vh, 11px); padding-bottom: clamp(8px, 1.4vh, 11px); }
+.msg { min-height: 0; margin-top: 8px; }
+.msg:empty { display: none; }
+.suggest { top: auto; bottom: calc(100% + 8px); max-height: min(380px, 46dvh); box-shadow: 0 -18px 60px rgba(0, 0, 0, .65); }
+
+@media (max-width: 560px) {
+  .modes { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; overflow: visible; margin: 0; padding: 0; }
+  .mode { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 2px; border-radius: 13px; font-size: .66rem; }
+  .mode .mi { font-size: 1.15rem; line-height: 1.2; }
+  .mode small { display: none; }
+  .stage { --rec: clamp(80px, 19vh, 128px); }
+  .teambar { gap: 6px; }
+  .team { padding: 6px 11px; font-size: .86rem; }
+  .challenge-bar { padding: 9px 12px; font-size: .84rem; }
+}
+@media (max-height: 700px) {
+  footer { display: none; }
+  .mode small { display: none; }
+  .msg { display: none; }
+  .iconbtn, .chipbtn { height: 36px; }
+  .iconbtn { width: 36px; }
+  .avatar { width: 26px; height: 26px; }
+  .stage { --rec: clamp(70px, 17vh, 120px); padding-top: 8px; padding-bottom: 10px; }
+  .stat { flex-direction: row; justify-content: center; align-items: baseline; gap: 6px; padding: 4px 6px; }
+  .stat b { font-size: 1.05rem; }
+  .player { margin: 8px 0 2px; }
+  .guess { margin-top: 9px; gap: 7px; }
+  .challenge-bar { padding: 7px 12px; }
+  .challenge-bar .rounds { margin-top: 5px; }
+}
+@media (max-height: 560px) {
+  .app { gap: 6px; padding-top: 6px; padding-bottom: 6px; }
+  .stage { --rec: clamp(58px, 13.5vh, 90px); }
+  .eq, .cliphint { display: none; }
+  .mode { padding-top: 4px; padding-bottom: 4px; }
+  .mode .mi { font-size: 1rem; }
+  .filters-head { padding-top: 6px; padding-bottom: 6px; }
+  .team { padding: 4px 10px; }
+  .timeline { margin-top: 8px; }
+  .attempts { margin-top: 6px; }
+  #guess { padding-top: 9px; padding-bottom: 9px; }
+  .btn { padding-top: 7px; padding-bottom: 7px; }
+}
+/* very short window, e.g. a phone with the keyboard open: keep only the record and the search */
+@media (max-height: 440px) {
+  .modes, .filters, .teambar, .stats, .attempts, .timeline, .challenge-bar { display: none; }
+  .stage { --rec: 64px; }
+  .player { margin-top: 4px; }
+}
+.btn { white-space: nowrap; }
+.stat { white-space: nowrap; min-width: 0; }
+@media (max-width: 560px) {
+  .actions .btn { padding-left: 10px; padding-right: 10px; font-size: .86rem; }
+}
+@media (max-width: 560px) and (max-height: 700px) {
+  .stat { gap: 4px; }
+  .stat span { font-size: .58rem; letter-spacing: .08em; }
+  .stat.hot b::after { content: none; }
+}

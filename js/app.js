@@ -133,7 +133,7 @@ const potential = () => Math.max(5, Math.round(diffObj().pts * Math.pow(0.6, S.t
 /* ------------------------------------------------------------------ render */
 function renderModes() {
   $('modes').innerHTML = MODES.map(m =>
-    `<button class="mode ${S.mode === m.id ? 'active' : ''}" data-mode="${m.id}">${m.label}<small>${m.sub}</small></button>`).join('');
+    `<button class="mode ${S.mode === m.id ? 'active' : ''}" data-mode="${m.id}"><span class="mi">${m.label.split(' ')[0]}</span><span class="ml">${m.label.split(' ').slice(1).join(' ')}</span><small>${m.sub}</small></button>`).join('');
 }
 function segRow(group, items, current, labelFn) {
   document.querySelectorAll(`[data-group="${group}"]`).forEach(el => {
@@ -757,11 +757,18 @@ $('nameSave').onclick = () => {
 $('nameInput').addEventListener('keydown', e => { if (e.key === 'Enter') $('nameSave').click(); });
 
 /* ------------------------------------------------------------------ filters & settings events */
-$('filtersToggle').onclick = () => {
-  const open = $('filtersBody').hidden;
+function setFiltersOpen(open) {
   $('filtersBody').hidden = !open;
   $('filtersToggle').setAttribute('aria-expanded', String(open));
-};
+}
+$('filtersToggle').onclick = () => setFiltersOpen($('filtersBody').hidden);
+// the filter panel floats over the game, so close it on an outside click or Escape
+document.addEventListener('pointerdown', e => {
+  if (!$('filtersBody').hidden && !e.target.closest('#filtersCard')) setFiltersOpen(false);
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !$('filtersBody').hidden) setFiltersOpen(false);
+});
 $('filtersBody').addEventListener('click', e => {
   const btn = e.target.closest('button[data-v]');
   if (!btn || S.challenge) return;

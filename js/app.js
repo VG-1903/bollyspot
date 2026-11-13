@@ -189,10 +189,18 @@ function renderSummary() {
   $('poolCount').textContent = pool.length.toLocaleString('en-IN');
   S.relaxNote = RELAX_NOTES[relax] || '';
 }
+function setStat(id, value) {
+  const el = $(id), v = String(value);
+  if (el.textContent === v) return;
+  const grew = Number(v) > Number(el.textContent);
+  el.textContent = v;
+  if (grew) { el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); }
+}
 function renderStats() {
-  $('score').textContent = S.challenge ? S.challenge.points : S.score;
-  $('streak').textContent = S.streak;
-  $('best').textContent = S.best;
+  setStat('score', S.challenge ? S.challenge.points : S.score);
+  setStat('streak', S.streak);
+  setStat('best', S.best);
+  $('streak').parentElement.classList.toggle('hot', S.streak >= 3);
   $('worth').textContent = S.roundOver ? '–' : potential();
   document.querySelector('#score').previousElementSibling.textContent = S.challenge ? 'Points' : 'Score';
 }
@@ -410,11 +418,35 @@ function endRound(won, survivalMiss = false) {
   showReveal(won, gained);
 }
 
+function confetti() {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const css = getComputedStyle(document.body);
+  const colors = [css.getPropertyValue('--a1'), css.getPropertyValue('--a2'), '#ffffff', '#3ddc84'];
+  const box = document.createElement('div');
+  box.className = 'confetti';
+  for (let i = 0; i < 70; i++) {
+    const p = document.createElement('i');
+    p.style.left = (Math.random() * 100) + '%';
+    p.style.background = colors[i % colors.length];
+    p.style.setProperty('--x', (Math.random() * 240 - 120) + 'px');
+    p.style.setProperty('--r', (Math.random() * 1080 - 540) + 'deg');
+    p.style.setProperty('--d', (1.3 + Math.random() * 1.3) + 's');
+    p.style.setProperty('--w', (Math.random() * 0.35) + 's');
+    if (i % 3 === 0) { p.style.borderRadius = '50%'; p.style.height = '9px'; }
+    box.appendChild(p);
+  }
+  document.body.appendChild(box);
+  setTimeout(() => box.remove(), 3200);
+}
+
 function showReveal(won, gained) {
   const s = S.current;
   $('verdict').textContent = won ? `Correct · +${gained}` : 'The song was';
   $('verdict').className = 'verdict ' + (won ? 'good' : 'bad');
   $('rArt').src = artUrl(s, 300);
+  $('rBg').style.backgroundImage = s.i ? `url("${artUrl(s, 100)}")` : 'none';
+  $('revealSheet').classList.toggle('won', won);
+  if (won) confetti();
   $('rTitle').textContent = s.t;
   $('rMeta').textContent = [s.m, s.a, s.y || ''].filter(Boolean).join(' · ');
   const ch = S.challenge;
